@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchRoutes, fetchRouteStations, type TransitRoute, type RouteStation } from '@/lib/supabase';
-
-const downloads = [
-  { label: 'Metro Orange Line PDF' },
-  { label: 'Feeder Routes (Zone A)' },
-];
+import { fetchRoutes, fetchStations, fetchRouteStations, type TransitRoute, type TransitStation, type RouteStation } from '@/lib/supabase';
+import { calculateFare, STATION_ROUTES, type RouteDef } from '@/data/transitData';
 
 const typeBadgeClass: Record<string, string> = {
   brt: 'bg-secondary-fixed text-on-secondary-fixed',
@@ -13,7 +9,6 @@ const typeBadgeClass: Record<string, string> = {
 };
 
 const statusForRoute = (route: TransitRoute): { label: string; cls: string; dot: string } => {
-  // Deterministic pseudo-status from route code so the UI feels live but is stable.
   const hash = route.code.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   if (hash % 7 === 0) return { label: 'Delayed', cls: 'text-error', dot: 'bg-error' };
   if (hash % 3 === 0) return { label: 'On-Schedule', cls: 'text-on-tertiary-fixed-variant', dot: 'bg-on-tertiary-container' };
@@ -22,16 +17,26 @@ const statusForRoute = (route: TransitRoute): { label: string; cls: string; dot:
 
 const fareForRoute = (route: TransitRoute): string => {
   if (route.type === 'brt') return 'Rs. 30';
-  if (route.type === 'rawalpindi_feeder') return 'Rs. 20';
   return 'Rs. 20';
 };
+
+interface FareResult {
+  fare: number;
+  routes: RouteDef[];
+  direct: boolean;
+  fromName: string;
+  toName: string;
+}
 
 export default function SchedulesPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [farePulse, setFarePulse] = useState(false);
+  const [fareResult, setFareResult] = useState<FareResult | null>(null);
   const [routes, setRoutes] = useState<TransitRoute[]>([]);
+  const [stations, setStations] = useState<TransitStation[]>([]);
   const [routeStations, setRouteStations] = useState<RouteStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +45,10 @@ export default function SchedulesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [r, rs] = await Promise.all([fetchRoutes(), fetchRouteStations()]);
+        const [r, s, rs] = await Promise.all([fetchRoutes(), fetchStations(), fetchRouteStations()]);
         if (cancelled) return;
         setRoutes(r);
+        setStations(s);
         setRouteStations(rs);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load schedules');
@@ -59,11 +65,16 @@ export default function SchedulesPage() {
     const temp = from;
     setFrom(to);
     setTo(temp);
+    setFareResult(null);
   };
 
   const handleCalc = () => {
-    setFarePulse(true);
-    setTimeout(() => setFarePulse(false), 600);
+    if (!from || !to || from === to) {
+      setFareResult(null);
+      return;
+    }
+    const result = calculateFare(from, to);
+    setFareResult({ ...result, fromName: from, toName: to });
   };
 
   const stationCount = useMemo(() => {
@@ -72,15 +83,27 @@ export default function SchedulesPage() {
     return counts;
   }, [routeStations]);
 
+  const filteredStations = useMemo(
+    () => {
+      const list = stations.map((s) => s.name).sort();
+      if (!search) return list;
+      const lower = search.toLowerCase();
+      return list.filter((name) => name.toLowerCase().includes(lower));
+    },
+    [stations, search]
+  );
+
   const filteredRoutes = useMemo(
-    () =>
-      routes.filter(
+    () => {
+      const lower = search.toLowerCase();
+      return routes.filter(
         (r) =>
-          r.name.toLowerCase().includes(search.toLowerCase()) ||
-          r.from_terminal.toLowerCase().includes(search.toLowerCase()) ||
-          r.to_terminal.toLowerCase().includes(search.toLowerCase()) ||
-          r.code.toLowerCase().includes(search.toLowerCase())
-      ),
+          r.name.toLowerCase().includes(lower) ||
+          r.from_terminal.toLowerCase().includes(lower) ||
+          r.to_terminal.toLowerCase().includes(lower) ||
+          r.code.toLowerCase().includes(lower)
+      );
+    },
     [routes, search]
   );
 
@@ -121,43 +144,85 @@ export default function SchedulesPage() {
               Fare Calculator
             </h3>
             <div className="space-y-md">
-              <div>
+              <div className="relative">
                 <label className="block text-label-sm font-label-sm text-on-surface-variant mb-xs ml-1">Starting Station</label>
-                <div className="flex items-center bg-surface-container-low rounded-lg border border-outline-variant/40 px-md py-sm focus-within:border-primary transition-colors">
+                <button
+                  onClick={() => { setFromOpen(!fromOpen); setToOpen(false); }}
+                  className="w-full flex items-center bg-surface-container-low rounded-lg border border-outline-variant/40 px-md py-sm focus:border-primary transition-colors text-left"
+                >
                   <span className="material-symbols-outlined text-primary text-[20px] mr-sm">location_on</span>
-                  <input
-                    type="text"
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                    placeholder="e.g. Saddar"
-                    className="bg-transparent border-none focus:ring-0 w-full text-body-md font-body-md p-0 placeholder:text-outline outline-none"
-                  />
-                </div>
+                  <span className={`flex-1 text-body-md font-body-md ${from ? 'text-on-surface' : 'text-outline'}`}>{from || 'Select starting station'}</span>
+                  <span className="material-symbols-outlined text-outline text-[20px]">expand_more</span>
+                </button>
+                {fromOpen && (
+                  <div className="absolute z-20 mt-1 w-full bg-surface-container-lowest rounded-lg border border-outline-variant/30 shadow-lg max-h-60 overflow-y-auto">
+                    {allStationNames.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => { setFrom(name); setFromOpen(false); setFareResult(null); }}
+                        className="w-full text-left px-md py-sm hover:bg-surface-container-low text-body-md font-body-md text-on-surface border-b border-outline-variant/10 last:border-0"
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex justify-center -my-2 relative z-10">
                 <button onClick={handleSwap} className="bg-primary text-secondary-fixed p-xs rounded-full shadow-md hover:rotate-180 transition-transform duration-500">
                   <span className="material-symbols-outlined">swap_vert</span>
                 </button>
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-label-sm font-label-sm text-on-surface-variant mb-xs ml-1">Destination</label>
-                <div className="flex items-center bg-surface-container-low rounded-lg border border-outline-variant/40 px-md py-sm focus-within:border-primary transition-colors">
+                <button
+                  onClick={() => { setToOpen(!toOpen); setFromOpen(false); }}
+                  className="w-full flex items-center bg-surface-container-low rounded-lg border border-outline-variant/40 px-md py-sm focus:border-primary transition-colors text-left"
+                >
                   <span className="material-symbols-outlined text-secondary text-[20px] mr-sm">flag</span>
-                  <input
-                    type="text"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                    placeholder="e.g. Pak Secretariat"
-                    className="bg-transparent border-none focus:ring-0 w-full text-body-md font-body-md p-0 placeholder:text-outline outline-none"
-                  />
-                </div>
+                  <span className={`flex-1 text-body-md font-body-md ${to ? 'text-on-surface' : 'text-outline'}`}>{to || 'Select destination'}</span>
+                  <span className="material-symbols-outlined text-outline text-[20px]">expand_more</span>
+                </button>
+                {toOpen && (
+                  <div className="absolute z-20 mt-1 w-full bg-surface-container-lowest rounded-lg border border-outline-variant/30 shadow-lg max-h-60 overflow-y-auto">
+                    {allStationNames.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => { setTo(name); setToOpen(false); setFareResult(null); }}
+                        className="w-full text-left px-md py-sm hover:bg-surface-container-low text-body-md font-body-md text-on-surface border-b border-outline-variant/10 last:border-0"
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="mt-lg pt-lg border-t border-outline-variant/20">
-                <div className="flex justify-between items-center mb-md">
-                  <span className="text-label-md font-label-md text-on-surface-variant">Estimated Fare</span>
-                  <span className={`text-headline-lg font-headline-lg text-secondary-fixed-dim bg-primary px-md py-xs rounded-lg shadow-inner ${farePulse ? 'animate-pulse' : ''}`}>Rs. 50</span>
-                </div>
-                <button onClick={handleCalc} className="w-full bg-primary text-on-primary py-md rounded-lg text-label-md font-label-md hover:bg-primary-container transition-colors shadow-sm">
+                {fareResult ? (
+                  <div className="mb-md p-md bg-surface-container-low rounded-lg border border-outline-variant/20">
+                    <div className="flex justify-between items-center mb-sm">
+                      <span className="text-label-md font-label-md text-on-surface-variant">Estimated Fare</span>
+                      <span className="text-headline-lg font-headline-lg text-secondary-fixed-dim bg-primary px-md py-xs rounded-lg shadow-inner">Rs. {fareResult.fare}</span>
+                    </div>
+                    <div className="text-body-sm font-body-sm text-on-surface-variant">
+                      {fareResult.fare > 0 ? (
+                        fareResult.direct ? (
+                          <span>Direct route on <strong>{fareResult.routes[0].code}</strong> ({fareResult.routes[0].name}).</span>
+                        ) : (
+                          <span>Take <strong>{fareResult.routes[0].code}</strong> then transfer to <strong>{fareResult.routes[1].code}</strong>.</span>
+                        )
+                      ) : (
+                        <span>No direct connection found. Try a BRT transfer station.</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center mb-md">
+                    <span className="text-label-md font-label-md text-on-surface-variant">Estimated Fare</span>
+                    <span className="text-headline-lg font-headline-lg text-outline">Rs. --</span>
+                  </div>
+                )}
+                <button onClick={handleCalc} disabled={!from || !to || from === to} className="w-full bg-primary text-on-primary py-md rounded-lg text-label-md font-label-md hover:bg-primary-container transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
                   Calculate Detailed Fare
                 </button>
               </div>
@@ -171,15 +236,27 @@ export default function SchedulesPage() {
               Offline Access
             </h3>
             <div className="space-y-sm">
-              {downloads.map((dl) => (
-                <div key={dl.label} className="flex items-center justify-between p-sm hover:bg-surface-container rounded-lg cursor-pointer transition-colors group">
-                  <div className="flex items-center gap-sm">
-                    <span className="material-symbols-outlined text-error">picture_as_pdf</span>
-                    <span className="text-body-md font-body-md">{dl.label}</span>
-                  </div>
-                  <span className="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity">download</span>
+              <a href="/data/transit-routes/Transit_Routes_-_BRT.pdf" download className="flex items-center justify-between p-sm hover:bg-surface-container rounded-lg cursor-pointer transition-colors group">
+                <div className="flex items-center gap-sm">
+                  <span className="material-symbols-outlined text-error">picture_as_pdf</span>
+                  <span className="text-body-md font-body-md">BRT Routes PDF</span>
                 </div>
-              ))}
+                <span className="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity">download</span>
+              </a>
+              <a href="/data/transit-routes/Transit_Routes_-_Islamabad_Feeder.pdf" download className="flex items-center justify-between p-sm hover:bg-surface-container rounded-lg cursor-pointer transition-colors group">
+                <div className="flex items-center gap-sm">
+                  <span className="material-symbols-outlined text-error">picture_as_pdf</span>
+                  <span className="text-body-md font-body-md">Islamabad Feeder Routes PDF</span>
+                </div>
+                <span className="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity">download</span>
+              </a>
+              <a href="/data/transit-routes/Transit_Routes_-_Rawalpindi_Feeder.pdf" download className="flex items-center justify-between p-sm hover:bg-surface-container rounded-lg cursor-pointer transition-colors group">
+                <div className="flex items-center gap-sm">
+                  <span className="material-symbols-outlined text-error">picture_as_pdf</span>
+                  <span className="text-body-md font-body-md">Rawalpindi Feeder Routes PDF</span>
+                </div>
+                <span className="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity">download</span>
+              </a>
             </div>
           </div>
         </section>
@@ -261,3 +338,5 @@ export default function SchedulesPage() {
     </main>
   );
 }
+
+const allStationNames = Object.keys(STATION_ROUTES).sort();
