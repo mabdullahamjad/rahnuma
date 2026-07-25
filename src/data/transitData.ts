@@ -709,6 +709,45 @@ export function calculateFare(fromName: string, toName: string): { fare: number;
   return { fare: 0, routes: [], direct: false };
 }
 
+// Haversine distance between two [lat, lng] points in kilometers.
+function haversineKm(a: [number, number], b: [number, number]): number {
+  const R = 6371;
+  const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+  const dLng = ((b[1] - a[1]) * Math.PI) / 180;
+  const lat1 = (a[0] * Math.PI) / 180;
+  const lat2 = (b[0] * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Total on-route distance of a journey in kilometers, summed across all legs.
+export function journeyDistanceKm(j: Journey): number {
+  let total = 0;
+  for (const leg of j.legs) {
+    for (let i = 0; i < leg.stops.length - 1; i++) {
+      total += haversineKm(coordFor(leg.stops[i]), coordFor(leg.stops[i + 1]));
+    }
+  }
+  return total;
+}
+
+export interface JourneyImpact {
+  distanceKm: number;
+  co2SavedKg: number;
+  greenPoints: number;
+  fare: number;
+}
+
+// Eco-impact of completing a journey by transit instead of a private car.
+// A typical car emits ~150g CO2 per km; transit riders avoid that emission.
+export function journeyImpact(j: Journey): JourneyImpact {
+  const distanceKm = journeyDistanceKm(j);
+  const co2SavedKg = +(distanceKm * 0.15).toFixed(1);
+  const greenPoints = Math.round(distanceKm * 10) + j.fare;
+  return { distanceKm, co2SavedKg, greenPoints, fare: j.fare };
+}
+
 // Plain-text summary for AI context injection.
 export function buildTransitSummary(): string {
   const lines: string[] = [];
