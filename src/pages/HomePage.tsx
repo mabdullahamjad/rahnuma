@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchRoutes, fetchStations, fetchRouteStations, type TransitRoute, type TransitStation, type RouteStation } from '@/lib/supabase';
-import { STATION_ROUTES, planJourney, journeyImpact, type Journey, type JourneyImpact } from '@/data/transitData';
 
 const MAP_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCFbSEKJDRMU4cgjTQOg6A7bn8IhLu7Y7-N_0i6H2W4q8w08mNOAFRKwTJjywpIQAbAWyPEe7mzxlIuvfsVqkGblYVHzQloHbNv9OZmATazHui_HKXVFnWiIg7cdsPCHsRLPnf0_wwIyye3VR6838NuqU3eALFq8VvXidlCYoXDQNRNIsawtTFu_sJCotpKizn_A9fULvx612F1TxqX64ZeIFbzSLYOUDZ_067pgwV23jf9v4SRaXZu3w';
 
@@ -16,14 +15,6 @@ const transportModeLabels: Record<string, string> = {
   rawalpindi_feeder: 'Rawalpindi Feeders',
 };
 
-const allStationNames = Object.keys(STATION_ROUTES).sort();
-
-const SERVICE_CUTOFF_HOUR = 22; // 22:00 — service goes Off after this hour.
-
-function isServiceActiveNow(): boolean {
-  return new Date().getHours() < SERVICE_CUTOFF_HOUR;
-}
-
 export default function HomePage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -32,13 +23,6 @@ export default function HomePage() {
   const [routeStations, setRouteStations] = useState<RouteStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [serviceActive, setServiceActive] = useState(isServiceActiveNow());
-
-  // Re-check service status every minute so the badge flips at 22:00.
-  useEffect(() => {
-    const id = window.setInterval(() => setServiceActive(isServiceActiveNow()), 60_000);
-    return () => window.clearInterval(id);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,15 +49,6 @@ export default function HomePage() {
     setFrom(to);
     setTo(temp);
   };
-
-  // Plan the journey whenever both endpoints are valid station names.
-  const journey: Journey | null = useMemo(() => {
-    if (!from || !to || from === to) return null;
-    if (!STATION_ROUTES[from] || !STATION_ROUTES[to]) return null;
-    return planJourney(from, to);
-  }, [from, to]);
-
-  const impact: JourneyImpact | null = useMemo(() => (journey ? journeyImpact(journey) : null), [journey]);
 
   // Frequent destinations: top transfer/BRT stations by number of routes passing through
   const frequentDestinations = useMemo(() => {
@@ -135,37 +110,13 @@ export default function HomePage() {
 
   return (
     <main className="md:ml-64 pb-12 px-container-margin pt-lg">
-      <datalist id="station-list">
-        {allStationNames.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
         {/* Journey Planner */}
         <section className="lg:col-span-8 bg-surface-container-lowest rounded-3xl p-lg shadow-sm border border-outline-variant/10 flex flex-col relative overflow-hidden">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
-          <div className="mb-lg relative flex items-start justify-between gap-md">
-            <div>
-              <h1 className="text-headline-lg font-headline-lg text-primary mb-xs">Where to?</h1>
-              <p className="text-body-md font-body-md text-on-surface-variant opacity-80">Plan your transit across the twin cities.</p>
-            </div>
-            {/* Live service status badge */}
-            <div
-              className={`flex items-center gap-2 px-md py-sm rounded-full text-label-md font-label-md font-bold border ${
-                serviceActive
-                  ? 'bg-success/10 text-success border-success/30'
-                  : 'bg-error/10 text-error border-error/30'
-              }`}
-            >
-              <span className={`relative flex h-2.5 w-2.5`}>
-                {serviceActive && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-                )}
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${serviceActive ? 'bg-success' : 'bg-error'}`} />
-              </span>
-              {serviceActive ? 'Service Active' : 'Service Off'}
-            </div>
+          <div className="mb-lg relative">
+            <h1 className="text-headline-lg font-headline-lg text-primary mb-xs">Where to?</h1>
+            <p className="text-body-md font-body-md text-on-surface-variant opacity-80">Plan your transit across the twin cities.</p>
           </div>
 
           <div className="flex flex-col gap-md relative">
@@ -174,7 +125,6 @@ export default function HomePage() {
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline">location_on</span>
                 <input
                   type="text"
-                  list="station-list"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
                   placeholder="From: Current Location"
@@ -186,7 +136,6 @@ export default function HomePage() {
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary">my_location</span>
                 <input
                   type="text"
-                  list="station-list"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
                   placeholder="To: Enter destination"
@@ -197,7 +146,6 @@ export default function HomePage() {
             <button
               onClick={handleSwap}
               className="absolute right-4 top-1/2 -translate-y-1/2 bg-surface p-2 rounded-full shadow-md border border-outline-variant/20 text-primary hover:rotate-180 transition-transform duration-500 z-20"
-              aria-label="Swap origin and destination"
             >
               <span className="material-symbols-outlined">swap_vert</span>
             </button>
@@ -304,49 +252,22 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
                   <span className="material-symbols-outlined text-secondary-fixed">eco</span>
                 </div>
-                <div className="flex-grow">
+                <div>
                   <h3 className="text-title-md font-title-md">Your Impact</h3>
-                  <p className="text-label-sm font-label-sm text-tertiary-fixed-dim">
-                    {from && to ? `${from} → ${to}` : 'Select a route to see your impact'}
-                  </p>
+                  <p className="text-label-sm font-label-sm text-tertiary-fixed-dim">Eco-Warrior Level</p>
                 </div>
               </div>
-
-              {impact ? (
-                <>
-                  <div className="grid grid-cols-2 gap-md">
-                    <div className="bg-white/10 p-md rounded-2xl">
-                      <p className="text-[24px] font-bold text-secondary-fixed">{impact.co2SavedKg}kg</p>
-                      <p className="text-label-sm font-label-sm opacity-80">CO2 Saved</p>
-                    </div>
-                    <div className="bg-white/10 p-md rounded-2xl">
-                      <p className="text-[24px] font-bold text-secondary-fixed">{impact.greenPoints}</p>
-                      <p className="text-label-sm font-label-sm opacity-80">Green Points</p>
-                    </div>
-                    <div className="bg-white/10 p-md rounded-2xl">
-                      <p className="text-[24px] font-bold text-secondary-fixed">{impact.distanceKm.toFixed(1)}km</p>
-                      <p className="text-label-sm font-label-sm opacity-80">Distance</p>
-                    </div>
-                    <div className="bg-white/10 p-md rounded-2xl">
-                      <p className="text-[24px] font-bold text-secondary-fixed">Rs. {impact.fare}</p>
-                      <p className="text-label-sm font-label-sm opacity-80">Fare</p>
-                    </div>
-                  </div>
-                  <p className="mt-lg text-label-sm font-label-sm opacity-70 italic">
-                    {journey && journey.transfers > 0
-                      ? `Saves the equivalent of ${(impact.co2SavedKg / 6).toFixed(1)} trees vs. driving.`
-                      : `A direct trip — saves the equivalent of ${(impact.co2SavedKm / 6).toFixed(1)} trees vs. driving.`}
-                  </p>
-                </>
-              ) : (
-                <div className="bg-white/10 p-lg rounded-2xl text-center">
-                  <p className="text-label-md font-label-md opacity-80">
-                    {from || to
-                      ? 'Pick valid station names from the list to calculate your impact.'
-                      : "Choose where you're travelling from and to above."}
-                  </p>
+              <div className="grid grid-cols-2 gap-md">
+                <div className="bg-white/10 p-md rounded-2xl">
+                  <p className="text-[24px] font-bold text-secondary-fixed">12.4kg</p>
+                  <p className="text-label-sm font-label-sm opacity-80">CO2 Saved</p>
                 </div>
-              )}
+                <div className="bg-white/10 p-md rounded-2xl">
+                  <p className="text-[24px] font-bold text-secondary-fixed">240</p>
+                  <p className="text-label-sm font-label-sm opacity-80">Green Points</p>
+                </div>
+              </div>
+              <p className="mt-lg text-label-sm font-label-sm opacity-70 italic">"You've saved the equivalent of 2 trees this month!"</p>
             </div>
           </div>
         </div>
