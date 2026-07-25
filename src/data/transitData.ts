@@ -62,30 +62,17 @@ const STATION_COORDS: Record<string, [number, number]> = {
   'Saudi Pak Tower': [33.7500, 73.0170],
   'Parliament House': [33.7520, 73.0150],
   'D-Chowk': [33.7540, 73.0130],
-  // Blue Line
+  // Blue / Green / Orange Lines — shared station names where lines overlap
   'Bhara Kahu': [33.6700, 73.1400],
   'Quaid-e-Azam University': [33.6800, 73.1300],
   'Bari Imam': [33.6900, 73.1200],
-  'Aabpara Blue': [33.7000, 73.1100],
-  '7th Avenue Blue': [33.7100, 73.1000],
-  'Pak Secretariat Blue': [33.7200, 73.0900],
-  // Green Line
-  'Bhara Kahu Green': [33.6700, 73.1400],
   'Malpur': [33.6750, 73.1300],
-  'Quaid-e-Azam University Green': [33.6800, 73.1250],
-  'Bari Imam Green': [33.6850, 73.1200],
-  'Aabpara Green': [33.6950, 73.1150],
-  '7th Avenue Green': [33.7100, 73.1000],
-  'Pak Secretariat Green': [33.7200, 73.0900],
-  'Kashmir Highway Green': [33.7300, 73.0800],
-  'PIMS Green': [33.7380, 73.0290],
   // Orange Line
   'Chaklala': [33.6000, 73.0900],
   'Airport': [33.6100, 73.1000],
   'Khanna': [33.6200, 73.0850],
   'Sohan': [33.6300, 73.0800],
   'Pir Sohawa': [33.6400, 73.0750],
-  'Bharakahu Orange': [33.6700, 73.1400],
   // Feeder hubs
   'Pakistan Secretariat': [33.7280, 73.0390],
   'Satra Meel': [33.6600, 73.0900],
@@ -223,7 +210,7 @@ const BRT_ROUTES: RouteDef[] = [
     fare: 30,
     stations: [
       'Bhara Kahu', 'Quaid-e-Azam University', 'Bari Imam',
-      'Aabpara Blue', '7th Avenue Blue', 'Pak Secretariat Blue',
+      'Aabpara', '7th Avenue', 'Pak Secretariat',
     ],
   },
   {
@@ -231,17 +218,17 @@ const BRT_ROUTES: RouteDef[] = [
     name: 'Green Line',
     type: 'brt',
     color: '#388e3c',
-    from_terminal: 'Bhara Kahu Green',
-    to_terminal: 'PIMS Green',
+    from_terminal: 'Bhara Kahu',
+    to_terminal: 'PIMS',
     first_service: '06:00',
     last_service: '22:30',
     frequency_peak_min: 6,
     frequency_offpeak_min: 12,
     fare: 30,
     stations: [
-      'Bhara Kahu Green', 'Malpur', 'Quaid-e-Azam University Green',
-      'Bari Imam Green', 'Aabpara Green', '7th Avenue Green',
-      'Pak Secretariat Green', 'Kashmir Highway Green', 'PIMS Green',
+      'Bhara Kahu', 'Malpur', 'Quaid-e-Azam University',
+      'Bari Imam', 'Aabpara', '7th Avenue',
+      'Pak Secretariat', 'Kashmir Highway', 'PIMS',
     ],
   },
   {
@@ -250,14 +237,14 @@ const BRT_ROUTES: RouteDef[] = [
     type: 'brt',
     color: '#f57c00',
     from_terminal: 'Chaklala',
-    to_terminal: 'Bharakahu Orange',
+    to_terminal: 'Bhara Kahu',
     first_service: '06:00',
     last_service: '22:00',
     frequency_peak_min: 10,
     frequency_offpeak_min: 20,
     fare: 30,
     stations: [
-      'Chaklala', 'Airport', 'Khanna', 'Sohan', 'Pir Sohawa', 'Bharakahu Orange',
+      'Chaklala', 'Airport', 'Khanna', 'Sohan', 'Pir Sohawa', 'Bhara Kahu',
     ],
   },
 ];
@@ -275,7 +262,7 @@ const ISLAMABAD_FEEDERS: RouteDef[] = [
     frequency_peak_min: 10,
     frequency_offpeak_min: 20,
     fare: 20,
-    stations: ['F-11 Markaz', 'E-11 Markaz', 'G-10 Markaz', 'G-9 Markaz', 'G-8 Markaz', 'Pakistan Secretariat'],
+    stations: ['F-11 Markaz', 'E-11 Markaz', 'G-10 Markaz', 'G-9 Markaz', 'G-8 Markaz', 'Pak Secretariat'],
   },
   {
     code: 'FR-2',
@@ -418,7 +405,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 10,
     frequency_offpeak_min: 20,
     fare: 20,
-    stations: ['Saddar Hub', 'Raja Bazaar', 'Trunk Bazaar', 'Banni', 'Gordon College'],
+    stations: ['Saddar', 'Raja Bazaar', 'Trunk Bazaar', 'Banni', 'Gordon College'],
   },
   {
     code: 'R-2',
@@ -432,7 +419,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 12,
     frequency_offpeak_min: 25,
     fare: 20,
-    stations: ['Liaquat Bagh Hub', 'Marrir Chowk Hub', 'Rialto Hub', 'Commercial Market'],
+    stations: ['Liaquat Bagh', 'Marrir Chowk', 'Rialto Chowk', 'Commercial Market'],
   },
   {
     code: 'R-3',
@@ -446,7 +433,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 15,
     frequency_offpeak_min: 30,
     fare: 20,
-    stations: ['Shamsabad Hub', 'Sadiqabad Hub', 'Chandni Chowk Hub'],
+    stations: ['Shamsabad', 'Sadiqabad', 'Chandni Chowk'],
   },
   {
     code: 'R-4',
@@ -460,7 +447,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 15,
     frequency_offpeak_min: 30,
     fare: 20,
-    stations: ['Pir Wadhai Hub', 'IJP Hub', 'Faizabad Terminal'],
+    stations: ['Pir Wadhai', 'IJP Road', 'Faizabad'],
   },
   {
     code: 'R-5',
@@ -474,7 +461,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 12,
     frequency_offpeak_min: 25,
     fare: 20,
-    stations: ['Faizabad Terminal', 'Nadir Chowk Hub', 'Satra Meel Terminal'],
+    stations: ['Faizabad', 'Nadir Chowk Hub', 'Satra Meel Terminal'],
   },
   {
     code: 'R-6',
@@ -502,7 +489,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 30,
     frequency_offpeak_min: 60,
     fare: 20,
-    stations: ['Sohan Hub', 'Lehtarar'],
+    stations: ['Sohan', 'Lehtarar'],
   },
   {
     code: 'R-8',
@@ -516,7 +503,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 20,
     frequency_offpeak_min: 40,
     fare: 20,
-    stations: ['Bharakahu Hub', 'Malpur Hub', 'Bari Imam Hub', 'Quaid-e-Azam Hub'],
+    stations: ['Bhara Kahu', 'Malpur', 'Bari Imam', 'Quaid-e-Azam University'],
   },
   {
     code: 'R-9',
@@ -530,7 +517,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 15,
     frequency_offpeak_min: 30,
     fare: 20,
-    stations: ['Chaklala Hub', 'Airport Hub'],
+    stations: ['Chaklalla', 'Airport'],
   },
   {
     code: 'R-10',
@@ -544,7 +531,7 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
     frequency_peak_min: 30,
     frequency_offpeak_min: 60,
     fare: 20,
-    stations: ['Pir Sohawa Hub', 'Sohan Hub'],
+    stations: ['Pir Sohawa', 'Sohan'],
   },
 ];
 
@@ -620,18 +607,21 @@ export function planJourney(fromName: string, toName: string, maxTransfers = 3):
   const visited = new Set<string>(); // key: station + '|' + arrivedOn
   const queue: Path[] = [];
 
-  // Seed: from the origin, try boarding every route that serves it.
+  // Seed: from the origin, try boarding every route that serves it — both directions.
   for (const r of STATION_ROUTES[fromName]) {
     const idx = routeStationIndex.get(r.code)!;
     const fromIdx = idx.get(fromName)!;
-    // Ride in the forward direction to any later station on this route.
-    for (let i = fromIdx + 1; i < r.stations.length; i++) {
+    for (let i = 0; i < r.stations.length; i++) {
+      if (i === fromIdx) continue;
       const dest = r.stations[i];
+      const stops = i > fromIdx
+        ? r.stations.slice(fromIdx, i + 1)
+        : r.stations.slice(i, fromIdx + 1).reverse();
       const leg: JourneyLeg = {
         route: r,
         boardAt: fromName,
         alightAt: dest,
-        stops: r.stations.slice(fromIdx, i + 1),
+        stops,
       };
       if (dest === toName) {
         return { legs: [leg], fare: r.fare, transfers: 0, fromName, toName };

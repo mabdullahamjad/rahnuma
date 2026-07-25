@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchRoutes, fetchStations, fetchRouteStations, type TransitRoute, type TransitStation, type RouteStation } from '@/lib/supabase';
-import { calculateFare, STATION_ROUTES, type RouteDef } from '@/data/transitData';
+import { calculateFare, STATION_ROUTES, planJourney, type RouteDef, type Journey } from '@/data/transitData';
 
 const typeBadgeClass: Record<string, string> = {
   brt: 'bg-secondary-fixed text-on-secondary-fixed',
@@ -22,8 +22,7 @@ const fareForRoute = (route: TransitRoute): string => {
 
 interface FareResult {
   fare: number;
-  routes: RouteDef[];
-  direct: boolean;
+  journey: Journey | null;
   fromName: string;
   toName: string;
 }
@@ -73,8 +72,8 @@ export default function SchedulesPage() {
       setFareResult(null);
       return;
     }
-    const result = calculateFare(from, to);
-    setFareResult({ ...result, fromName: from, toName: to });
+    const journey = planJourney(from, to);
+    setFareResult({ fare: journey?.fare ?? 0, journey, fromName: from, toName: to });
   };
 
   const stationCount = useMemo(() => {
@@ -205,14 +204,18 @@ export default function SchedulesPage() {
                       <span className="text-headline-lg font-headline-lg text-secondary-fixed-dim bg-primary px-md py-xs rounded-lg shadow-inner">Rs. {fareResult.fare}</span>
                     </div>
                     <div className="text-body-sm font-body-sm text-on-surface-variant">
-                      {fareResult.fare > 0 ? (
-                        fareResult.direct ? (
-                          <span>Direct route on <strong>{fareResult.routes[0].code}</strong> ({fareResult.routes[0].name}).</span>
-                        ) : (
-                          <span>Take <strong>{fareResult.routes[0].code}</strong> then transfer to <strong>{fareResult.routes[1].code}</strong>.</span>
-                        )
+                      {fareResult.journey ? (
+                        <div className="space-y-xs">
+                          <div>{fareResult.journey.legs.length} bus{fareResult.journey.legs.length > 1 ? 'es' : ''}, {fareResult.journey.transfers} transfer{fareResult.journey.transfers !== 1 ? 's' : ''}.</div>
+                          {fareResult.journey.legs.map((leg, i) => (
+                            <div key={i} className="flex gap-xs">
+                              <span className="font-semibold text-primary shrink-0">{leg.route.code}</span>
+                              <span>{leg.boardAt} → {leg.alightAt} ({leg.stops.length} stops)</span>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        <span>No direct connection found. Try a BRT transfer station.</span>
+                        <span>No connection found. Try a major BRT transfer station.</span>
                       )}
                     </div>
                   </div>
