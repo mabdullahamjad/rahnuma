@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { ALL_ROUTES, STATION_ROUTES, calculateFare, type RouteDef } from '@/data/transitData';
+import { useState, useRef, useEffect } from 'react';
+import { ALL_ROUTES, STATION_ROUTES, calculateFare, planJourney, describeJourney, type RouteDef } from '@/data/transitData';
 
 interface Message {
   id: number;
@@ -18,9 +18,9 @@ type ChatMessage = Message | UserMessage;
 const AI_AVATAR_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuA6onKgyzSSjPBW24l-n4JXEw4tGFwjHzbj7ZSW1HDFlfjkXkvXkn79b6J3FS2j0Rst9h4C1PUsclgAQ50EeiouLmH90LZtx_XUclsMkDtGPKt7N5P3fBmV9UVpqXkpQwKUy_i_bHNeJTSZB0lN8qC4jqqGcq6clRxbY7R67OKe3-5xE2F0uW_8OrrQrie2axqhbxltdC-ZFALi7rdxz6Ad0Qxv5I93uaTwThCGp6-GYNTPFT7yLvKkB4HszXKgq2BEB3sIKFqyMVE4';
 
 const starters = [
-  'How do I get to Faisal Mosque?',
-  "What's the fare from Saddar to Pak Secretariat?",
-  'Which routes pass through Faizabad?',
+  'How do I get from Saddar to Bhara Kahu?',
+  "What's the fare from Faizabad to Pak Secretariat?",
+  'Which routes pass through PIMS?',
   'Tell me about the Red Line',
 ];
 
@@ -28,14 +28,40 @@ const allStationNames = Object.keys(STATION_ROUTES).sort();
 
 function findStationInQuery(q: string): string | null {
   const lower = q.toLowerCase();
-  // Exact match first
-  for (const name of allStationNames) {
+  // Exact match first (longest names first to avoid partial overlap)
+  const sorted = [...allStationNames].sort((a, b) => b.length - a.length);
+  for (const name of sorted) {
     if (lower.includes(name.toLowerCase())) return name;
   }
   // Partial/fuzzy match
-  for (const name of allStationNames) {
+  for (const name of sorted) {
     const tokens = name.toLowerCase().split(/[\s-]+/);
     if (tokens.length > 1 && tokens.every((t) => lower.includes(t))) return name;
+  }
+  return null;
+}
+
+// Find a "from X to Y" pair in the query, returning both station names.
+function findFromToPair(q: string): { from: string; to: string } | null {
+  const lower = q.toLowerCase();
+  const sorted = [...allStationNames].sort((a, b) => b.length - a.length);
+  // Look for "from <station> to <station>"
+  const fromIdx = lower.indexOf('from ');
+  const toIdx = lower.indexOf(' to ');
+  if (fromIdx !== -1 && toIdx !== -1 && toIdx > fromIdx) {
+    const fromSegment = lower.slice(fromIdx, toIdx);
+    const toSegment = lower.slice(toIdx);
+    const from = sorted.find((s) => fromSegment.includes(s.toLowerCase()));
+    const to = sorted.find((s) => toSegment.includes(s.toLowerCase()) && s !== from);
+    if (from && to) return { from, to };
+  }
+  // Pattern: "X to Y" without explicit "from"
+  if (toIdx !== -1) {
+    const before = lower.slice(0, toIdx);
+    const after = lower.slice(toIdx);
+    const from = sorted.find((s) => before.endsWith(s.toLowerCase()) || before.includes(` ${s.toLowerCase()}`));
+    const to = sorted.find((s) => after.includes(s.toLowerCase()) && s !== from);
+    if (from && to) return { from, to };
   }
   return null;
 }
@@ -55,20 +81,20 @@ function routeSummary(r: RouteDef): string {
 
 function getResponse(query: string): string {
   const q = query.toLowerCase();
+  const pair = findFromToPair(query);
 
-  // Fare calculation
+  // Fare calculation — uses multi-hop planner for accuracy
   if (q.includes('fare') || q.includes('cost') || q.includes('price') || q.includes('ticket')) {
-    const fromMatch = allStationNames.find((s) => q.includes('from') && q.includes(s.toLowerCase()));
-    const toMatch = allStationNames.find((s) => q.includes('to') && q.includes(s.toLowerCase()) && s !== fromMatch);
-    if (fromMatch && toMatch) {
-      const result = calculateFare(fromMatch, toMatch);
-      if (result.fare > 0) {
-        const path = result.direct
-          ? `Take ${result.routes[0].code} (${result.routes[0].name}) directly.`
-          : `Take ${result.routes[0].code} then transfer to ${result.routes[1].code}.`;
-        return `The fare from ${fromMatch} to ${toMatch} is Rs.${result.fare}. ${path}`;
+    if (pair) {
+      const journey = planJourney(pair.from, pair.to);
+      if (journey) {
+        const direct = journey.transfers === 0;
+        const path = direct
+          ? `Take ${journey.legs[0].route.code} (${journey.legs[0].route.name}) directly.`
+          : journey.legs.map((l, i) => `${i + 1}. ${l.route.code} from ${l.boardAt} to ${l.alightAt}`).join(' → ');
+        return `The fare from ${pair.from} to ${pair.to} is Rs.${journey.fare} (${journey.legs.length} bus${journey.legs.length > 1 ? 'es' : ''}, ${journey.transfers} transfer${journey.transfers !== 1 ? 's' : ''}). Route: ${path}`;
       }
-      return `I couldn't find a direct connection between ${fromMatch} and ${toMatch}. You may need to transfer via a BRT station.`;
+      return `I couldn't find a connection between ${pair.from} and ${pair.to}. Try a major BRT transfer point like Faizabad, Pak Secretariat, or PIMS.`;
     }
   }
 
@@ -89,8 +115,12 @@ function getResponse(query: string): string {
     }
   }
 
-  // How to get to a destination
-  if (q.includes('how do i get') || q.includes('how to get') || q.includes('how to reach') || q.includes('how do i reach')) {
+  // How to get / route between two stations — multi-hop journey planner
+  if (q.includes('how do i get') || q.includes('how to get') || q.includes('how to reach') || q.includes('how do i reach') || q.includes('get from') || q.includes('from') && q.includes('to') && (q.includes('bus') || q.includes('route') || q.includes('go'))) {
+    if (pair) {
+      return describeJourney(planJourney(pair.from, pair.to));
+    }
+    // Single destination, no origin given
     const dest = findStationInQuery(q);
     if (dest) {
       const routes = STATION_ROUTES[dest] ?? [];

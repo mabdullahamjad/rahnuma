@@ -581,6 +581,117 @@ export const STATION_ROUTES: Record<string, RouteDef[]> = (() => {
   return map;
 })();
 
+// A single leg of a journey: board a route at one station, ride to another.
+export interface JourneyLeg {
+  route: RouteDef;
+  boardAt: string;
+  alightAt: string;
+  stops: string[]; // ordered stations traveled on this leg
+}
+
+// A full multi-hop journey from origin to destination.
+export interface Journey {
+  legs: JourneyLeg[];
+  fare: number;
+  transfers: number;
+  fromName: string;
+  toName: string;
+}
+
+// BFS over the route-station graph to find the journey with the fewest transfers.
+// Two stations are connected if a single route passes through both (in order).
+// Transfers happen at stations shared between routes.
+export function planJourney(fromName: string, toName: string, maxTransfers = 3): Journey | null {
+  if (fromName === toName) return null;
+  if (!STATION_ROUTES[fromName] || !STATION_ROUTES[toName]) return null;
+
+  // Precompute which routes serve each station and the ordered index of stations.
+  const routeStationIndex = new Map<string, Map<string, number>>();
+  for (const r of ALL_ROUTES) {
+    const m = new Map<string, number>();
+    r.stations.forEach((s, i) => m.set(s, i));
+    routeStationIndex.set(r.code, m);
+  }
+
+  // State: (currentStation, routeCodeWeArrivedOn | null). BFS gives fewest legs.
+  type State = { station: string; arrivedOn: string | null };
+  type Path = { state: State; legs: JourneyLeg[] };
+
+  const visited = new Set<string>(); // key: station + '|' + arrivedOn
+  const queue: Path[] = [];
+
+  // Seed: from the origin, try boarding every route that serves it.
+  for (const r of STATION_ROUTES[fromName]) {
+    const idx = routeStationIndex.get(r.code)!;
+    const fromIdx = idx.get(fromName)!;
+    // Ride in the forward direction to any later station on this route.
+    for (let i = fromIdx + 1; i < r.stations.length; i++) {
+      const dest = r.stations[i];
+      const leg: JourneyLeg = {
+        route: r,
+        boardAt: fromName,
+        alightAt: dest,
+        stops: r.stations.slice(fromIdx, i + 1),
+      };
+      if (dest === toName) {
+        return { legs: [leg], fare: r.fare, transfers: 0, fromName, toName };
+      }
+      const key = `${dest}|${r.code}`;
+      if (!visited.has(key)) {
+        visited.add(key);
+        queue.push({ state: { station: dest, arrivedOn: r.code }, legs: [leg] });
+      }
+    }
+  }
+
+  while (queue.length > 0) {
+    const { state, legs } = queue.shift()!;
+    if (legs.length - 1 >= maxTransfers) continue;
+
+    // From the current station, try every OTHER route that serves it.
+    for (const r of STATION_ROUTES[state.station]) {
+      if (r.code === state.arrivedOn) continue; // don't re-board the same route
+      const idx = routeStationIndex.get(r.code)!;
+      const boardIdx = idx.get(state.station)!;
+      for (let i = 0; i < r.stations.length; i++) {
+        if (i === boardIdx) continue;
+        const dest = r.stations[i];
+        const stops = i > boardIdx ? r.stations.slice(boardIdx, i + 1) : r.stations.slice(i, boardIdx + 1).reverse();
+        const leg: JourneyLeg = {
+          route: r,
+          boardAt: state.station,
+          alightAt: dest,
+          stops,
+        };
+        const newLegs = [...legs, leg];
+        if (dest === toName) {
+          const fare = newLegs.reduce((sum, l) => sum + l.route.fare, 0);
+          return { legs: newLegs, fare, transfers: newLegs.length - 1, fromName, toName };
+        }
+        const key = `${dest}|${r.code}`;
+        if (!visited.has(key)) {
+          visited.add(key);
+          queue.push({ state: { station: dest, arrivedOn: r.code }, legs: newLegs });
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+// Human-readable journey description for the AI assistant.
+export function describeJourney(j: Journey | null): string {
+  if (!j) return 'No connection found between those stations. Try a major BRT transfer point like Faizabad, Pak Secretariat, or PIMS.';
+  const parts: string[] = [];
+  parts.push(`From ${j.fromName} to ${j.toName}: ${j.legs.length} bus${j.legs.length > 1 ? 'es' : ''}, ${j.transfers} transfer${j.transfers !== 1 ? 's' : ''}, total fare Rs.${j.fare}.`);
+  j.legs.forEach((leg, i) => {
+    const dir = leg.stops.length > 1 ? ` via ${leg.stops.slice(1, -1).join(', ')}` : '';
+    parts.push(`${i + 1}. Take ${leg.route.code} (${leg.route.name}) from ${leg.boardAt} to ${leg.alightAt}${dir ? ` (${leg.stops.length} stops)` : ''}.`);
+  });
+  return parts.join('\n');
+}
+
 // Fare calculation: same-route = route fare; transfer = sum of two route fares.
 export function calculateFare(fromName: string, toName: string): { fare: number; routes: RouteDef[]; direct: boolean } {
   const fromRoutes = STATION_ROUTES[fromName] ?? [];
