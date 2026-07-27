@@ -86,26 +86,43 @@ export default function HomePage({ onNavigate, onOpenRouteGroup }: { onNavigate:
   );
 
   const findNearestStation = (latitude: number, longitude: number) => {
-    if (stations.length === 0) return;
+  if (stations.length === 0) return;
 
-    const toRadians = (value: number) => (value * Math.PI) / 180;
-    const distanceInKm = (station: TransitStation) => {
-      const earthRadiusKm = 6371;
-      const deltaLat = toRadians(station.lat - latitude);
-      const deltaLng = toRadians(station.lng - longitude);
-      const a = Math.sin(deltaLat / 2) ** 2
-        + Math.cos(toRadians(latitude)) * Math.cos(toRadians(station.lat))
-        * Math.sin(deltaLng / 2) ** 2;
-      return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    };
+  const toRadians = (value: number) => (value * Math.PI) / 180;
 
-    const nearest = stations.reduce((closest, station) => (
-      distanceInKm(station) < distanceInKm(closest) ? station : closest
-    ));
-    const distance = distanceInKm(nearest);
-    setFrom(nearest.name);
-    setLocationStatus(`Nearest station: ${nearest.name} (${distance.toFixed(1)} km away)`);
+  const distanceInKm = (station: TransitStation) => {
+    const earthRadiusKm = 6371;
+    const deltaLat = toRadians(station.lat - latitude);
+    const deltaLng = toRadians(station.lng - longitude);
+
+    const a =
+      Math.sin(deltaLat / 2) ** 2 +
+      Math.cos(toRadians(latitude)) *
+        Math.cos(toRadians(station.lat)) *
+        Math.sin(deltaLng / 2) ** 2;
+
+    return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
+
+  const validStations = stations.filter(
+    station => station.type === "brt" || station.type === "metro"
+  );
+
+  if (validStations.length === 0) return;
+
+  const nearest = validStations.reduce((closest, station) =>
+    distanceInKm(station) < distanceInKm(closest)
+      ? station
+      : closest
+  );
+
+  const distance = distanceInKm(nearest);
+
+  setFrom(nearest.name);
+  setLocationStatus(
+    `Nearest station: ${nearest.name} (${distance.toFixed(1)} km away)`
+  );
+};
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
