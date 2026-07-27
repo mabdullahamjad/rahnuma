@@ -18,6 +18,7 @@ export type TransitRoute = {
   last_service: string;
   frequency_peak_min: number;
   frequency_offpeak_min: number;
+  fare: number;
 };
 
 export type TransitStation = {
@@ -38,7 +39,7 @@ export type RouteStation = {
   route: TransitRoute;
 };
 
-const CACHE_KEY = 'rahnuma_transit_cache_v2';
+const CACHE_KEY = 'rahnuma_transit_cache_v3';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
 interface CachedData {
@@ -82,6 +83,7 @@ function staticRoutes(): TransitRoute[] {
     last_service: r.last_service,
     frequency_peak_min: r.frequency_peak_min,
     frequency_offpeak_min: r.frequency_offpeak_min,
+    fare: r.fare,
   }));
 }
 

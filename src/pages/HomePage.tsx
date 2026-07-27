@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchRoutes, fetchStations, fetchRouteStations, type TransitRoute, type TransitStation, type RouteStation } from '@/lib/supabase';
-import { planJourney, type Journey } from '@/data/transitData';
+import { calculateJourneyImpact, planJourney, type Journey } from '@/data/transitData';
 
 const MAP_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCFbSEKJDRMU4cgjTQOg6A7bn8IhLu7Y7-N_0i6H2W4q8w08mNOAFRKwTJjywpIQAbAWyPEe7mzxlIuvfsVqkGblYVHzQloHbNv9OZmATazHui_HKXVFnWiIg7cdsPCHsRLPnf0_wwIyye3VR6838NuqU3eALFq8VvXidlCYoXDQNRNIsawtTFu_sJCotpKizn_A9fULvx612F1TxqX64ZeIFbzSLYOUDZ_067pgwV23jf9v4SRaXZu3w';
 
@@ -16,7 +16,10 @@ const transportModeLabels: Record<string, string> = {
   rawalpindi_feeder: 'Rawalpindi Feeders',
 };
 
-export default function HomePage() {
+interface SavedJourney { from: string; to: string; fare: number; at: number; }
+const JOURNEY_HISTORY_KEY = 'rahnuma.journey-history';
+
+export default function HomePage({ onNavigate, onOpenRouteGroup }: { onNavigate: (page: string) => void; onOpenRouteGroup: (type?: string) => void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [routes, setRoutes] = useState<TransitRoute[]>([]);
@@ -27,6 +30,7 @@ export default function HomePage() {
   const [locationStatus, setLocationStatus] = useState<string | null>(null);
   const [journey, setJourney] = useState<Journey | null>(null);
   const [journeyMessage, setJourneyMessage] = useState<string | null>(null);
+  const [journeyHistory, setJourneyHistory] = useState<SavedJourney[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +52,10 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    try { setJourneyHistory(JSON.parse(localStorage.getItem(JOURNEY_HISTORY_KEY) ?? '[]')); } catch { setJourneyHistory([]); }
+  }, []);
+
   const handleSwap = () => {
     const temp = from;
     setFrom(to);
@@ -65,6 +73,11 @@ export default function HomePage() {
     const result = planJourney(from, to);
     setJourney(result);
     setJourneyMessage(result ? null : 'No connected bus route was found between these stations.');
+    if (result) {
+      const updated = [{ from, to, fare: result.fare, at: Date.now() }, ...journeyHistory.filter((item) => item.from !== from || item.to !== to)].slice(0, 8);
+      setJourneyHistory(updated);
+      localStorage.setItem(JOURNEY_HISTORY_KEY, JSON.stringify(updated));
+    }
   };
 
   const stationOptions = useMemo(
@@ -107,26 +120,18 @@ export default function HomePage() {
     );
   };
 
-  // Frequent destinations: top transfer/BRT stations by number of routes passing through
+  // Frequent destinations are based on the journeys actually planned here.
   const frequentDestinations = useMemo(() => {
-    const counts = new Map<string, { station: TransitStation; routeCount: number }>();
-    for (const rs of routeStations) {
-      const existing = counts.get(rs.station_id);
-      if (existing) existing.routeCount += 1;
-      else counts.set(rs.station_id, { station: rs.station, routeCount: 1 });
-    }
-    return Array.from(counts.values())
-      .sort((a, b) => b.routeCount - a.routeCount)
+    const counts = new Map<string, number>();
+    for (const item of journeyHistory) counts.set(item.to, (counts.get(item.to) ?? 0) + 1);
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
-      .map(({ station }) => ({
-        icon: station.type === 'transfer' ? 'apartment' : station.type === 'brt' ? 'business' : 'shopping_bag',
-        name: station.name,
-        sub: station.city,
-      }));
-  }, [routeStations]);
+      .map(([name, count]) => ({ icon: 'location_on', name, sub: `${count} planned trip${count === 1 ? '' : 's'}` }));
+  }, [journeyHistory]);
 
   // Recent journeys: simulate from first few routes
-  const recentJourneys = useMemo(() => {
+  const placeholderJourneys = useMemo(() => {
     return routes.slice(0, 2).map((route) => ({
       icon: route.type === 'brt' ? 'directions_bus' : 'train',
       route: `${route.from_terminal} → ${route.to_terminal}`,
@@ -141,8 +146,18 @@ export default function HomePage() {
       icon: transportModeIcons[type] ?? 'directions_bus',
       label: transportModeLabels[type] ?? type,
       count: routes.filter((r) => r.type === type).length,
+      type,
     }));
   }, [routes]);
+
+  const recentJourneys = useMemo(() => journeyHistory.slice(0, 3).map((item) => ({
+    icon: 'directions_bus',
+    route: `${item.from} to ${item.to}`,
+    time: new Date(item.at).toLocaleString(),
+    fare: `Rs. ${item.fare}`,
+  })), [journeyHistory]);
+
+  const impact = useMemo(() => calculateJourneyImpact(journey), [journey]);
 
   if (loading) {
     return (
@@ -229,11 +244,11 @@ export default function HomePage() {
             </button>
             {locationStatus && <p className="text-label-sm font-label-sm text-on-surface-variant">{locationStatus}</p>}
           </div>
-
           <div className="mt-lg grid grid-cols-1 sm:grid-cols-3 gap-md">
             {transportModes.map((mode) => (
               <button
                 key={mode.label}
+                onClick={() => onOpenRouteGroup(mode.type)}
                 className="flex flex-col items-center justify-center p-md bg-surface border border-outline-variant/10 rounded-2xl hover:bg-primary group transition-all duration-300 shadow-sm"
               >
                 <span className="material-symbols-outlined text-primary group-hover:text-secondary-fixed text-[32px] mb-2">{mode.icon}</span>
@@ -257,8 +272,8 @@ export default function HomePage() {
                   <div className="space-y-sm">
                     {journey.legs.map((leg, index) => (
                       <div key={`${leg.route.code}-${index}`} className="flex gap-sm text-body-sm font-body-sm text-on-surface-variant">
-                        <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-label-sm font-label-sm text-on-primary">{leg.route.code}</span>
-                        <p>Take {leg.route.name} from <strong className="text-on-surface">{leg.boardAt}</strong> to <strong className="text-on-surface">{leg.alightAt}</strong> ({leg.stops.length - 1} stops).</p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-label-sm font-label-sm ${leg.mode === 'walk' ? 'bg-outline text-white' : 'bg-primary text-on-primary'}`}>{leg.mode === 'walk' ? 'WALK' : leg.route.code}</span>
+                        <p>{leg.mode === 'walk' ? <>Walk from <strong className="text-on-surface">{leg.boardAt}</strong> to <strong className="text-on-surface">{leg.alightAt}</strong> ({leg.route.name.match(/~\d+ m/)?.[0] ?? 'nearby connection'}).</> : <>Take {leg.route.name} from <strong className="text-on-surface">{leg.boardAt}</strong> to <strong className="text-on-surface">{leg.alightAt}</strong> ({leg.stops.length - 1} stops).</>}</p>
                       </div>
                     ))}
                   </div>
@@ -271,17 +286,17 @@ export default function HomePage() {
         {/* Right Column */}
         <div className="lg:col-span-4 flex flex-col gap-lg">
           {/* Map Card */}
-          <div className="h-48 rounded-3xl overflow-hidden relative shadow-sm border border-outline-variant/20 group">
+          <button onClick={() => onNavigate('map')} className="h-48 w-full text-left rounded-3xl overflow-hidden relative shadow-sm border border-outline-variant/20 group">
             <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url("${MAP_URL}")` }} />
             <div className="absolute inset-0 bg-gradient-to-t from-primary/60 to-transparent z-10" />
             <div className="absolute bottom-4 left-4 z-20 flex flex-col">
               <span className="text-label-sm font-label-sm text-secondary-fixed uppercase tracking-widest">Live View</span>
               <span className="text-title-md font-title-md text-white">Network Map</span>
             </div>
-            <button className="absolute top-4 right-4 z-20 bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/40 transition-colors">
+            <span className="absolute top-4 right-4 z-20 bg-white/20 backdrop-blur-md p-2 rounded-full text-white group-hover:bg-white/40 transition-colors">
               <span className="material-symbols-outlined">fullscreen</span>
-            </button>
-          </div>
+            </span>
+          </button>
 
           {/* Frequent Destinations */}
           <section className="bg-surface-container-low rounded-3xl p-lg flex-grow border border-outline-variant/10 shadow-sm">
@@ -293,6 +308,7 @@ export default function HomePage() {
               {frequentDestinations.map((dest) => (
                 <button
                   key={dest.name}
+                  onClick={() => { setTo(dest.name); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   className="w-full flex items-center gap-md p-md bg-white rounded-2xl hover:bg-secondary-fixed/10 transition-colors border border-outline-variant/5 shadow-sm group"
                 >
                   <div className="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -353,20 +369,20 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h3 className="text-title-md font-title-md">Your Impact</h3>
-                  <p className="text-label-sm font-label-sm text-tertiary-fixed-dim">Eco-Warrior Level</p>
+                  <p className="text-label-sm font-label-sm text-tertiary-fixed-dim">{impact ? `${impact.distanceKm.toFixed(1)} km transit trip` : 'Plan a journey to calculate'}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-md">
                 <div className="bg-white/10 p-md rounded-2xl">
-                  <p className="text-[24px] font-bold text-secondary-fixed">12.4kg</p>
-                  <p className="text-label-sm font-label-sm opacity-80">CO2 Saved</p>
+                  <p className="text-[24px] font-bold text-secondary-fixed">{impact ? `${impact.co2SavedKg.toFixed(2)}kg` : '—'}</p>
+                  <p className="text-label-sm font-label-sm opacity-80">Estimated CO2 Saved</p>
                 </div>
                 <div className="bg-white/10 p-md rounded-2xl">
-                  <p className="text-[24px] font-bold text-secondary-fixed">240</p>
+                  <p className="text-[24px] font-bold text-secondary-fixed">{impact?.greenPoints ?? '—'}</p>
                   <p className="text-label-sm font-label-sm opacity-80">Green Points</p>
                 </div>
               </div>
-              <p className="mt-lg text-label-sm font-label-sm opacity-70 italic">"You've saved the equivalent of 2 trees this month!"</p>
+              <p className="mt-lg text-label-sm font-label-sm opacity-70 italic">{impact ? 'Compared with a solo petrol-car trip over the same selected route.' : 'Select two stations and tap Show Routes to see your trip impact.'}</p>
             </div>
           </div>
         </div>

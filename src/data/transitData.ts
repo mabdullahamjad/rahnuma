@@ -54,6 +54,8 @@ const STATION_COORDS: Record<string, [number, number]> = {
   'Shaheed': [33.7340, 73.0330],
   'Kashmir Highway': [33.7360, 73.0310],
   'PIMS': [33.7380, 73.0290],
+  'PIMS Hospital': [33.7372, 73.0308],
+  'Koral Chowk': [33.6115, 73.0705],
   'Nust': [33.7400, 73.0270],
   'G-9 Markaz': [33.7420, 73.0250],
   'G-8 Markaz': [33.7440, 73.0230],
@@ -178,22 +180,20 @@ const BRT_ROUTES: RouteDef[] = [
     name: 'Red Line',
     type: 'brt',
     color: '#d32f2f',
-    from_terminal: 'Faiz Ahmed Faiz',
-    to_terminal: 'Pak Secretariat',
+    from_terminal: 'Secretariat',
+    to_terminal: 'Saddar',
     first_service: '05:30',
     last_service: '23:00',
     frequency_peak_min: 4,
     frequency_offpeak_min: 10,
     fare: 30,
     stations: [
-      'Faiz Ahmed Faiz', 'Faizabad', 'IJP Road', 'Pir Wadhai', 'Saddar',
-      'Rialto Chowk', 'Marrir Chowk', 'Liaquat Bagh', 'Committee Chowk',
-      'Waris Khan', 'Rehmanabad', 'Chandni Chowk', 'Sadiqabad',
-      'Fauji Foundation', 'Shamsabad', 'Khayaban-e-Johar', 'Faiz-e-Aam',
-      'I-8', 'I-9', 'Pak Secretariat', 'Stock Exchange', '7th Avenue',
-      'Shaheed', 'Kashmir Highway', 'PIMS', 'Nust', 'G-9 Markaz',
-      'G-8 Markaz', 'G-7 Markaz', 'Aabpara', 'Saudi Pak Tower',
-      'Parliament House', 'D-Chowk',
+      'Secretariat', 'Parade Ground', 'Shaheed-e-Millat', '7th Avenue',
+      'Stock Exchange', 'PIMS', 'Katchery', 'Ibn-e-Sina', 'Chaman',
+      'Kashmir Highway', 'Faiz Ahmed Faiz', 'Khayaban-e-Johar', 'Potohar',
+      'IJP', 'Faizabad', 'Shamsabad', '6th Road', 'Rehmanabad',
+      'Chandni Chowk', 'Waris Khan', 'Committee Chowk', 'Liaquat Bagh',
+      'Marir', 'Saddar',
     ],
   },
   {
@@ -201,16 +201,15 @@ const BRT_ROUTES: RouteDef[] = [
     name: 'Blue Line',
     type: 'brt',
     color: '#1976d2',
-    from_terminal: 'Bhara Kahu',
-    to_terminal: 'Pak Secretariat',
+    from_terminal: 'PIMS',
+    to_terminal: 'Koral Chowk',
     first_service: '06:00',
     last_service: '22:30',
     frequency_peak_min: 8,
     frequency_offpeak_min: 15,
     fare: 30,
     stations: [
-      'Bhara Kahu', 'Quaid-e-Azam University', 'Bari Imam',
-      'Aabpara', '7th Avenue', 'Pak Secretariat',
+      'PIMS', 'F-9 Park', 'Koral Chowk',
     ],
   },
   {
@@ -227,8 +226,7 @@ const BRT_ROUTES: RouteDef[] = [
     fare: 30,
     stations: [
       'Bhara Kahu', 'Malpur', 'Quaid-e-Azam University',
-      'Bari Imam', 'Aabpara', '7th Avenue',
-      'Pak Secretariat', 'Kashmir Highway', 'PIMS',
+      'Bari Imam', 'PIMS',
     ],
   },
   {
@@ -236,15 +234,15 @@ const BRT_ROUTES: RouteDef[] = [
     name: 'Orange Line',
     type: 'brt',
     color: '#f57c00',
-    from_terminal: 'Chaklala',
-    to_terminal: 'Bhara Kahu',
+    from_terminal: 'Faiz Ahmed Faiz',
+    to_terminal: 'Airport',
     first_service: '06:00',
     last_service: '22:00',
     frequency_peak_min: 10,
     frequency_offpeak_min: 20,
     fare: 30,
     stations: [
-      'Chaklala', 'Airport', 'Khanna', 'Sohan', 'Pir Sohawa', 'Bhara Kahu',
+      'Faiz Ahmed Faiz', 'Faizabad', 'Khanna', 'Koral Chowk', 'Airport',
     ],
   },
 ];
@@ -256,13 +254,13 @@ const ISLAMABAD_FEEDERS: RouteDef[] = [
     type: 'islamabad_feeder',
     color: '#00897b',
     from_terminal: 'F-11 Markaz',
-    to_terminal: 'Pakistan Secretariat',
+    to_terminal: 'G-10 Markaz',
     first_service: '06:00',
     last_service: '22:00',
     frequency_peak_min: 10,
     frequency_offpeak_min: 20,
     fare: 20,
-    stations: ['F-11 Markaz', 'E-11 Markaz', 'G-10 Markaz', 'G-9 Markaz', 'G-8 Markaz', 'Pak Secretariat'],
+    stations: ['F-11 Markaz', 'E-11 Markaz', 'G-10 Markaz', 'G-9 Markaz', 'G-8 Markaz'],
   },
   {
     code: 'FR-2',
@@ -276,7 +274,7 @@ const ISLAMABAD_FEEDERS: RouteDef[] = [
     frequency_peak_min: 12,
     frequency_offpeak_min: 25,
     fare: 20,
-    stations: ['G-7 Markaz', 'G-8 Markaz', 'G-9 Markaz', 'PIMS'],
+    stations: ['G-7 Markaz', 'G-8 Markaz', 'G-9 Markaz', 'PIMS Hospital'],
   },
   {
     code: 'FR-3',
@@ -326,13 +324,13 @@ const ISLAMABAD_FEEDERS: RouteDef[] = [
     type: 'islamabad_feeder',
     color: '#00897b',
     from_terminal: 'I-8 Markaz',
-    to_terminal: 'PIMS',
+    to_terminal: 'PIMS Hospital',
     first_service: '06:00',
     last_service: '22:00',
     frequency_peak_min: 15,
     frequency_offpeak_min: 30,
     fare: 20,
-    stations: ['I-8 Markaz', 'I-9 Markaz', 'G-9 Markaz', 'PIMS'],
+    stations: ['I-8 Markaz', 'I-9 Markaz', 'G-9 Markaz', 'PIMS Hospital'],
   },
   {
     code: 'FR-7',
@@ -535,7 +533,10 @@ const RAWALPINDI_FEEDERS: RouteDef[] = [
   },
 ];
 
-export const ALL_ROUTES: RouteDef[] = [...BRT_ROUTES, ...ISLAMABAD_FEEDERS, ...RAWALPINDI_FEEDERS];
+// Fare policy supplied for this project: Red Metro is Rs.30; every other
+// service is Rs.50. Keeping it here prevents screens from drifting apart.
+export const ALL_ROUTES: RouteDef[] = [...BRT_ROUTES, ...ISLAMABAD_FEEDERS, ...RAWALPINDI_FEEDERS]
+  .map((route) => ({ ...route, fare: route.code === 'RED' ? 30 : 50 }));
 
 // Build unique station list across all routes.
 export const ALL_STATIONS: StationDef[] = (() => {
@@ -574,6 +575,7 @@ export interface JourneyLeg {
   boardAt: string;
   alightAt: string;
   stops: string[]; // ordered stations traveled on this leg
+  mode?: 'ride' | 'walk';
 }
 
 // A full multi-hop journey from origin to destination.
@@ -581,9 +583,52 @@ export interface Journey {
   legs: JourneyLeg[];
   fare: number;
   transfers: number;
-  totalStops?: number;
+  totalStops: number;
   fromName: string;
   toName: string;
+}
+
+export interface JourneyImpact {
+  distanceKm: number;
+  co2SavedKg: number;
+  greenPoints: number;
+}
+
+// Per-passenger-km estimates used consistently across the dashboard. The route
+// distance is calculated from the selected journey's station coordinates.
+const CAR_KG_CO2_PER_KM = 0.192;
+const BRT_KG_CO2_PER_KM = 0.069;
+const FEEDER_KG_CO2_PER_KM = 0.089;
+
+function distanceKm(a: StationDef, b: StationDef): number {
+  const radians = (value: number) => (value * Math.PI) / 180;
+  const dLat = radians(b.lat - a.lat);
+  const dLng = radians(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(radians(a.lat)) * Math.cos(radians(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+export function calculateJourneyImpact(journey: Journey | null): JourneyImpact | null {
+  if (!journey) return null;
+  const stationsByName = new Map(ALL_STATIONS.map((station) => [station.name, station]));
+  let transitEmissions = 0;
+  let totalDistance = 0;
+
+  for (const leg of journey.legs) {
+    if (leg.mode === 'walk') continue;
+    const emissionRate = leg.route.type === 'brt' ? BRT_KG_CO2_PER_KM : FEEDER_KG_CO2_PER_KM;
+    for (let index = 1; index < leg.stops.length; index++) {
+      const start = stationsByName.get(leg.stops[index - 1]);
+      const end = stationsByName.get(leg.stops[index]);
+      if (!start || !end) continue;
+      const segmentDistance = distanceKm(start, end);
+      totalDistance += segmentDistance;
+      transitEmissions += segmentDistance * emissionRate;
+    }
+  }
+
+  const co2SavedKg = Math.max(0, totalDistance * CAR_KG_CO2_PER_KM - transitEmissions);
+  return { distanceKm: totalDistance, co2SavedKg, greenPoints: Math.round(totalDistance * 10) };
 }
 
 // BFS over the route-station graph to find the journey with the fewest transfers.
@@ -625,7 +670,7 @@ function planJourneyBreadthFirst(fromName: string, toName: string, maxTransfers 
         stops,
       };
       if (dest === toName) {
-        return { legs: [leg], fare: r.fare, transfers: 0, fromName, toName };
+        return { legs: [leg], fare: r.fare, transfers: 0, totalStops: leg.stops.length - 1, fromName, toName };
       }
       const key = `${dest}|${r.code}`;
       if (!visited.has(key)) {
@@ -657,7 +702,7 @@ function planJourneyBreadthFirst(fromName: string, toName: string, maxTransfers 
         const newLegs = [...legs, leg];
         if (dest === toName) {
           const fare = newLegs.reduce((sum, l) => sum + l.route.fare, 0);
-          return { legs: newLegs, fare, transfers: newLegs.length - 1, fromName, toName };
+          return { legs: newLegs, fare, transfers: newLegs.length - 1, totalStops: newLegs.reduce((sum, leg) => sum + leg.stops.length - 1, 0), fromName, toName };
         }
         const key = `${dest}|${r.code}`;
         if (!visited.has(key)) {
@@ -673,14 +718,31 @@ function planJourneyBreadthFirst(fromName: string, toName: string, maxTransfers 
 
 type RouteState = { route: RouteDef; index: number };
 
+// Explicit walking links let the planner bridge nearby service stops without
+// inventing map coordinates.  They are used only while planning, never shown
+// as scheduled bus routes.
+const WALKING_LINKS: Array<{ code: string; name: string; from: string; to: string; metres: number }> = [
+  { code: 'WALK-PIMS-CEN', name: 'Walk to Centaurus', from: 'PIMS', to: 'Centaurus', metres: 1200 },
+  { code: 'WALK-AAB-F8', name: 'Walk to F-8 Markaz', from: 'Aabpara', to: 'F-8 Markaz', metres: 1700 },
+];
+
+const WALKING_ROUTES: RouteDef[] = WALKING_LINKS.map((link) => ({
+  code: link.code, name: `${link.name} (~${link.metres} m)`, type: 'islamabad_feeder', color: '#64748b',
+  from_terminal: link.from, to_terminal: link.to, first_service: '00:00', last_service: '23:59',
+  frequency_peak_min: 0, frequency_offpeak_min: 0, fare: 0, stations: [link.from, link.to],
+}));
+
 // Dijkstra's algorithm over stations and buses. Adjacent stops cost one unit;
 // changing buses costs three units, so the shortest path avoids needless swaps.
 export function planJourney(fromName: string, toName: string): Journey | null {
   if (fromName === toName) return null;
   if (!STATION_ROUTES[fromName] || !STATION_ROUTES[toName]) return null;
 
+  const planningRoutes = [...ALL_ROUTES, ...WALKING_ROUTES];
+  const planningStationRoutes: Record<string, RouteDef[]> = {};
+  for (const route of planningRoutes) for (const station of route.stations) (planningStationRoutes[station] ??= []).push(route);
   const routeStationIndex = new Map<string, Map<string, number>>();
-  for (const route of ALL_ROUTES) {
+  for (const route of planningRoutes) {
     routeStationIndex.set(route.code, new Map(route.stations.map((station, index) => [station, index])));
   }
 
@@ -698,7 +760,7 @@ export function planJourney(fromName: string, toName: string): Journey | null {
     queue.push({ key, cost });
   };
 
-  for (const route of STATION_ROUTES[fromName]) {
+  for (const route of planningStationRoutes[fromName]) {
     add(route, routeStationIndex.get(route.code)!.get(fromName)!, 0);
   }
 
@@ -714,13 +776,13 @@ export function planJourney(fromName: string, toName: string): Journey | null {
       for (let key: string | undefined = current.key; key; key = previous.get(key)) path.unshift(states.get(key)!);
 
       const legs: JourneyLeg[] = [];
-      let active: JourneyLeg = { route: path[0].route, boardAt: fromName, alightAt: fromName, stops: [fromName] };
+      let active: JourneyLeg = { route: path[0].route, boardAt: fromName, alightAt: fromName, stops: [fromName], mode: path[0].route.code.startsWith('WALK-') ? 'walk' : 'ride' };
       for (let i = 1; i < path.length; i++) {
         const next = path[i];
         const stop = next.route.stations[next.index];
         if (next.route.code !== active.route.code) {
           if (active.stops.length > 1) legs.push(active);
-          active = { route: next.route, boardAt: stop, alightAt: stop, stops: [stop] };
+          active = { route: next.route, boardAt: stop, alightAt: stop, stops: [stop], mode: next.route.code.startsWith('WALK-') ? 'walk' : 'ride' };
         } else {
           active.stops.push(stop);
           active.alightAt = stop;
@@ -731,7 +793,7 @@ export function planJourney(fromName: string, toName: string): Journey | null {
       return {
         legs,
         fare: legs.reduce((sum, leg) => sum + leg.route.fare, 0),
-        transfers: legs.length - 1,
+        transfers: Math.max(0, legs.filter((leg) => leg.mode !== 'walk').length - 1),
         totalStops: legs.reduce((sum, leg) => sum + leg.stops.length - 1, 0),
         fromName,
         toName,
@@ -741,7 +803,7 @@ export function planJourney(fromName: string, toName: string): Journey | null {
     for (const nextIndex of [currentState.index - 1, currentState.index + 1]) {
       if (nextIndex >= 0 && nextIndex < currentState.route.stations.length) add(currentState.route, nextIndex, current.cost + 1, current.key);
     }
-    for (const transferRoute of STATION_ROUTES[station]) {
+    for (const transferRoute of planningStationRoutes[station]) {
       if (transferRoute.code !== currentState.route.code) {
         add(transferRoute, routeStationIndex.get(transferRoute.code)!.get(station)!, current.cost + 3, current.key);
       }
@@ -749,13 +811,17 @@ export function planJourney(fromName: string, toName: string): Journey | null {
   }
   return null;
 }
-
 // Human-readable journey description for the AI assistant.
 export function describeJourney(j: Journey | null): string {
   if (!j) return 'No connection found between those stations. Try a major BRT transfer point like Faizabad, Pak Secretariat, or PIMS.';
   const parts: string[] = [];
-  parts.push(`Shortest route from ${j.fromName} to ${j.toName}: ${j.legs.length} bus${j.legs.length > 1 ? 'es' : ''}, ${j.transfers} transfer${j.transfers !== 1 ? 's' : ''}, ${j.totalStops ?? 0} stops, total fare Rs.${j.fare}.`);
+  const busLegs = j.legs.filter((leg) => leg.mode !== 'walk');
+  parts.push(`Shortest route from ${j.fromName} to ${j.toName}: ${busLegs.length} bus${busLegs.length !== 1 ? 'es' : ''}, ${j.transfers} transfer${j.transfers !== 1 ? 's' : ''}, ${j.totalStops} stops, total fare Rs.${j.fare}.`);
   j.legs.forEach((leg, i) => {
+    if (leg.mode === 'walk') {
+      parts.push(`${i + 1}. Walk from ${leg.boardAt} to ${leg.alightAt} (${leg.route.name.match(/~\\d+ m/)?.[0] ?? 'short walking link'}).`);
+      return;
+    }
     const dir = leg.stops.length > 1 ? ` via ${leg.stops.slice(1, -1).join(', ')}` : '';
     parts.push(`${i + 1}. Take ${leg.route.code} (${leg.route.name}) from ${leg.boardAt} to ${leg.alightAt}${dir ? ` (${leg.stops.length} stops)` : ''}.`);
   });

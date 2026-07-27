@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fetchRoutes, fetchRouteStations, fetchStations, type TransitRoute, type TransitStation, type RouteStation } from '@/lib/supabase';
+import { METRO_GEO_LINES } from '@/data/metroGeo';
 
 // Fix default marker icons in Leaflet bundled with Vite
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -209,11 +210,14 @@ export default function MapPage() {
           attribution='&copy; OpenStreetMap contributors'
         />
 
-        {polylines.map((p, i) => (
-          <Polyline key={i} positions={p.points} pathOptions={{ color: p.color, weight: 5, opacity: 0.85 }} />
+        {/* Only the user-supplied MetroJSON geometry is drawn on this map. */}
+        {METRO_GEO_LINES.filter(() => activeFilter === 'all' || activeFilter === 'brt').map((line) => (
+          <Polyline key={line.name} positions={line.points} pathOptions={{ color: line.color, weight: 6, opacity: 0.9 }}>
+            <Popup>{line.name} - supplied route geometry</Popup>
+          </Polyline>
         ))}
 
-        {visibleStations.map((s) => {
+        {false && visibleStations.map((s) => {
           const isTransfer = s.type === 'transfer';
           return (
             <Marker key={s.id} position={[s.lat, s.lng]} icon={makeStationIcon('#00290f', isTransfer)}>
@@ -227,7 +231,7 @@ export default function MapPage() {
           );
         })}
 
-        {liveVehicles.map((v) => (
+        {false && liveVehicles.map((v) => (
           <Marker key={v.route.id} position={[v.lat, v.lng]} icon={makeLiveIcon(v.route.color)}>
             <Popup>
               <div className="font-sans">
@@ -267,7 +271,7 @@ export default function MapPage() {
       </div>
 
       {/* Filter Chips */}
-      <div className="absolute bottom-md md:bottom-lg left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-sm glass-panel p-sm rounded-2xl shadow-xl border border-outline-variant/20 max-w-[calc(100%-40px)] overflow-x-auto">
+      <div className="absolute bottom-24 md:bottom-lg left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-sm glass-panel p-sm rounded-2xl shadow-xl border border-outline-variant/20 max-w-[calc(100%-40px)] overflow-x-auto">
         {filterChips.map((filter) => (
           <button
             key={filter.id}
@@ -285,7 +289,7 @@ export default function MapPage() {
       </div>
 
       {/* Live Arrivals Sidebar */}
-      <aside className="absolute top-md md:top-lg bottom-md md:bottom-lg left-md md:left-lg w-full max-w-[calc(100%-40px)] md:w-80 z-[1000]">
+      <aside className="absolute top-auto md:top-lg bottom-20 md:bottom-lg left-0 md:left-lg h-[42vh] md:h-auto w-full md:w-80 z-[1000]">
         <div className="flex flex-col h-full glass-panel rounded-3xl shadow-2xl border border-outline-variant/20 overflow-hidden">
           <div className="p-md bg-primary-container text-on-primary-container">
             <h2 className="text-title-md font-title-md text-white mb-md">Live Arrivals</h2>

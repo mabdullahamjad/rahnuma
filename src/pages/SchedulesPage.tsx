@@ -15,10 +15,7 @@ const statusForRoute = (route: TransitRoute): { label: string; cls: string; dot:
   return { label: 'Active', cls: 'text-on-tertiary-fixed-variant', dot: 'bg-on-tertiary-container animate-pulse' };
 };
 
-const fareForRoute = (route: TransitRoute): string => {
-  if (route.type === 'brt') return 'Rs. 30';
-  return 'Rs. 20';
-};
+const fareForRoute = (route: TransitRoute): string => `Rs. ${route.fare}`;
 
 interface FareResult {
   fare: number;
@@ -27,7 +24,7 @@ interface FareResult {
   toName: string;
 }
 
-export default function SchedulesPage() {
+export default function SchedulesPage({ routeTypeFilter }: { routeTypeFilter?: string }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [fromOpen, setFromOpen] = useState(false);
@@ -39,6 +36,7 @@ export default function SchedulesPage() {
   const [routeStations, setRouteStations] = useState<RouteStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,13 +95,14 @@ export default function SchedulesPage() {
       const lower = search.toLowerCase();
       return routes.filter(
         (r) =>
+          (!routeTypeFilter || r.type === routeTypeFilter) &&
           r.name.toLowerCase().includes(lower) ||
           r.from_terminal.toLowerCase().includes(lower) ||
           r.to_terminal.toLowerCase().includes(lower) ||
           r.code.toLowerCase().includes(lower)
       );
     },
-    [routes, search]
+    [routes, search, routeTypeFilter]
   );
 
   if (loading) {
@@ -301,7 +300,8 @@ export default function SchedulesPage() {
                 const status = statusForRoute(route);
                 const stops = stationCount.get(route.id) ?? 0;
                 return (
-                  <div key={route.id} className="grid grid-cols-12 gap-md px-lg py-md border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors items-center">
+                  <>
+                  <button key={route.id} onClick={() => setSelectedRouteId(selectedRouteId === route.id ? null : route.id)} className="w-full text-left grid grid-cols-12 gap-md px-lg py-md border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors items-center">
                     <div className="col-span-3 sm:col-span-2">
                       <span className={`${typeBadgeClass[route.type] ?? 'bg-outline text-surface'} font-bold px-md py-xs rounded-full shadow-sm text-sm`}>{route.code}</span>
                     </div>
@@ -321,7 +321,14 @@ export default function SchedulesPage() {
                     <div className="col-span-6 sm:col-span-2 text-right">
                       <span className="text-title-md font-title-md text-secondary-fixed-variant">{fareForRoute(route)}</span>
                     </div>
-                  </div>
+                  </button>
+                  {selectedRouteId === route.id && (
+                    <div className="px-lg pb-md bg-surface-container-low text-body-sm text-on-surface-variant">
+                      <p className="font-semibold text-primary mb-xs">Stops on {route.code}</p>
+                      <p>{routeStations.filter((item) => item.route_id === route.id).sort((a, b) => a.stop_order - b.stop_order).map((item) => item.station.name).join(' → ') || 'Station details are unavailable.'}</p>
+                    </div>
+                  )}
+                  </>
                 );
               })}
               {filteredRoutes.length === 0 && (

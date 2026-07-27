@@ -12,7 +12,7 @@ const items = [
 
 export default function MobileNav({ activePage, onNavigate }: MobileNavProps) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-primary flex justify-around items-center py-4 px-container-margin z-50">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-primary flex justify-around items-center py-4 px-container-margin z-[2000]">
       <button
         onClick={() => onNavigate('home')}
         className={`flex flex-col items-center gap-1 ${activePage === 'home' ? 'text-secondary-fixed' : 'text-tertiary-fixed-dim'}`}

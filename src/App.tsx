@@ -8,6 +8,7 @@ import AiPage from '@/pages/AiPage';
 
 function App() {
   const [page, setPage] = useState('home');
+  const [routeTypeFilter, setRouteTypeFilter] = useState<string | undefined>();
 
   const handleNavigate = (p: string) => {
     if (p === 'profile') {
@@ -17,27 +18,31 @@ function App() {
     setPage(p);
   };
 
+  const openRouteGroup = (type?: string) => {
+    setRouteTypeFilter(type);
+    setPage('schedules');
+  };
+
   const renderPage = () => {
     switch (page) {
       case 'map':
         return <MapPage />;
       case 'schedules':
-        return <SchedulesPage />;
+        return <SchedulesPage routeTypeFilter={routeTypeFilter} />;
       case 'ai':
         return <AiPage />;
       default:
-        return <HomePage />;
+        return <HomePage onNavigate={handleNavigate} onOpenRouteGroup={openRouteGroup} />;
     }
   };
 
   const isMapPage = page === 'map';
-  const isAiPage = page === 'ai';
 
   return (
     <div className={isMapPage ? 'h-screen overflow-hidden flex flex-col md:flex-row bg-surface' : 'min-h-screen bg-background'}>
       <SideNav activePage={page} onNavigate={handleNavigate} />
       {renderPage()}
-      {!isAiPage && <MobileNav activePage={page} onNavigate={handleNavigate} />}
+      <MobileNav activePage={page} onNavigate={handleNavigate} />
     </div>
   );
 }

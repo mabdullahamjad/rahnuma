@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { ALL_ROUTES, STATION_ROUTES, calculateFare, planJourney, describeJourney, type RouteDef } from '@/data/transitData';
+import { ALL_ROUTES, ALL_STATIONS, STATION_ROUTES, planJourney, describeJourney, buildTransitSummary, type RouteDef } from '@/data/transitData';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   id: number;
@@ -98,6 +99,11 @@ function getResponse(query: string): string {
     }
   }
 
+  // Check an origin/destination request before a single-station lookup.
+  if (pair && (q.includes('how do i get') || q.includes('how to get') || q.includes('how to reach') || q.includes('how do i reach') || q.includes('get from') || (q.includes('from') && q.includes('to')))) {
+    return describeJourney(planJourney(pair.from, pair.to));
+  }
+
   // Route info
   const route = findRouteInQuery(q);
   if (route) {
@@ -151,11 +157,71 @@ function getResponse(query: string): string {
   return "I can help with routes, fares, schedules, and station info across the Islamabad-Rawalpindi transit network. Try asking: 'Which routes pass through Faizabad?' or 'Fare from Saddar to Pak Secretariat?'";
 }
 
+function distanceKm(lat: number, lng: number, station: { lat: number; lng: number }): number {
+  const r = (value: number) => value * Math.PI / 180;
+  const dLat = r(station.lat - lat);
+  const dLng = r(station.lng - lng);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(r(lat)) * Math.cos(r(station.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getLocation(): Promise<GeolocationPosition | null> {
+  if (!navigator.geolocation) return Promise.resolve(null);
+  return new Promise((resolve) => navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }));
+}
+
+async function getAssistantResponse(query: string, location: GeolocationPosition | null = null): Promise<string> {
+  const pair = findFromToPair(query);
+  const destination = findStationInQuery(query);
+  const isJourneyRequest = /how|reach|get|go|route/i.test(query);
+  if (!pair && destination && isJourneyRequest && !location) {
+    return `To plan a trip to ${destination}, please allow location access when your browser asks. I will use your location to choose the nearest station, then find the route with the fewest bus changes.`;
+  }
+  if (!pair && destination && location) {
+    const { latitude, longitude } = location.coords;
+    const nearest = [...ALL_STATIONS].sort((a, b) => distanceKm(latitude, longitude, a) - distanceKm(latitude, longitude, b))[0];
+    let placeName = 'your current location';
+    try {
+      const placeResponse = await fetch(`/api/place?lat=${encodeURIComponent(latitude)}&lng=${encodeURIComponent(longitude)}`);
+      const place = await placeResponse.json();
+      placeName = place.name ?? placeName;
+    } catch {
+      // Local Vite does not serve the Vercel OpenStreetMap endpoint.
+    }
+    if (nearest) {
+      return `I located you near ${placeName}. The nearest transit station is ${nearest.name} (estimated ${distanceKm(latitude, longitude, nearest).toFixed(1)} km away).\n\n${describeJourney(planJourney(nearest.name, destination))}`;
+    }
+  }
+  // Vercel production endpoint. Its GROQ_API_KEY is a Vercel environment
+  // variable, so it never reaches the browser.
+  try {
+    const response = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, network: buildTransitSummary() }),
+    });
+    const data = await response.json();
+    if (response.ok && typeof data?.answer === 'string') return data.answer;
+  } catch {
+    // Local Vite development has no /api function; continue to the fallback.
+  }
+  try {
+    const { data, error } = await supabase.functions.invoke('assistant', {
+      body: { query, network: buildTransitSummary() },
+    });
+    if (!error && typeof data?.answer === 'string') return data.answer;
+  } catch {
+    // The offline route planner below keeps the assistant useful before the
+    // Supabase Edge Function is deployed.
+  }
+  return getResponse(query);
+}
+
 export default function AiPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 0,
-      text: "Assalam-o-Alaikum! I am your Rah-Numa digital assistant for the Islamabad & Rawalpindi transit network. Ask me about routes, fares, schedules, or any station. I have the full Dec 2025 network data ready.",
+      text: "Assalam-o-Alaikum! I can plan journeys, fares and station routes. For a destination without a starting point, I will ask for your location and choose the nearest station.",
       isUser: false,
     },
   ]);
@@ -174,8 +240,10 @@ export default function AiPage() {
     setInput('');
     setShowStarters(false);
 
-    setTimeout(() => {
-      const aiMsg: Message = { id: Date.now() + 1, text: getResponse(text), isUser: false };
+    const requiresLocation = !findFromToPair(text) && !!findStationInQuery(text) && /how|reach|get|go|route/i.test(text);
+    const locationPromise = requiresLocation ? getLocation() : Promise.resolve(null);
+    setTimeout(async () => {
+      const aiMsg: Message = { id: Date.now() + 1, text: await getAssistantResponse(text, await locationPromise), isUser: false };
       setMessages((prev) => [...prev, aiMsg]);
     }, 600);
   };
@@ -189,7 +257,7 @@ export default function AiPage() {
         <p className="text-body-md font-body-md text-outline">Ask me anything about routes, fares, schedules, or stations in Islamabad &amp; Rawalpindi.</p>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-container-margin py-xl flex flex-col gap-lg bg-surface-container-lowest">
+      <div className="flex-1 min-h-0 overflow-y-auto px-container-margin py-lg md:py-xl flex flex-col gap-lg bg-surface-container-lowest">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex gap-md max-w-2xl mx-auto w-full animate-fade-in ${msg.isUser ? 'flex-row-reverse' : ''}`}>
             <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.isUser ? 'bg-secondary-container' : 'bg-primary-container'}`}>
@@ -199,7 +267,7 @@ export default function AiPage() {
                 <img src={AI_AVATAR_URL} alt="AI Assistant" className="w-full h-full object-contain rounded-full" />
               )}
             </div>
-            <div className={`p-lg rounded-2xl shadow-sm border border-outline-variant/10 max-w-[80%] ${msg.isUser ? 'bg-primary text-on-primary rounded-tr-none' : 'bg-surface-container-low text-on-surface rounded-tl-none'}`}>
+            <div className={`p-md md:p-lg rounded-2xl shadow-sm border border-outline-variant/10 max-w-[88%] md:max-w-[80%] ${msg.isUser ? 'bg-primary text-on-primary rounded-tr-none' : 'bg-surface-container-low text-on-surface rounded-tl-none'}`}>
               <p className="text-body-md font-body-md whitespace-pre-line">{msg.text}</p>
             </div>
           </div>
@@ -221,7 +289,7 @@ export default function AiPage() {
         <div ref={chatEndRef} />
       </div>
 
-      <footer className="w-full px-container-margin py-lg bg-surface-bright border-t border-outline-variant/10">
+      <footer className="w-full mb-20 md:mb-0 px-container-margin py-lg bg-surface-bright border-t border-outline-variant/10">
         <div className="max-w-3xl mx-auto flex items-center gap-md bg-surface-container p-sm rounded-2xl shadow-inner border border-outline-variant/5">
           <button className="p-md text-outline hover:text-primary transition-colors">
             <span className="material-symbols-outlined">mic</span>
