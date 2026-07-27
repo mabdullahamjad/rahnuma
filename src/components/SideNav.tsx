@@ -63,11 +63,7 @@ export default function SideNav({ activePage, onNavigate }: SideNavProps) {
 
       {/* Footer Links */}
       <div className="pt-md border-t border-outline-variant/10 space-y-xs">
-        <button className="w-full flex items-center gap-md text-tertiary-fixed-dim px-md py-sm hover:text-secondary-fixed transition-colors">
-          <span className="material-symbols-outlined">settings</span>
-          <span className="text-label-md font-label-md">Settings</span>
-        </button>
-        <button className="w-full flex items-center gap-md text-tertiary-fixed-dim px-md py-sm hover:text-secondary-fixed transition-colors">
+        <button onClick={() => onNavigate('support')} className={`w-full flex items-center gap-md px-md py-sm transition-colors ${activePage === 'support' ? 'text-secondary-fixed' : 'text-tertiary-fixed-dim hover:text-secondary-fixed'}`}>
           <span className="material-symbols-outlined">help</span>
           <span className="text-label-md font-label-md">Support</span>
         </button>

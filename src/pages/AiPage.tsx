@@ -310,6 +310,7 @@ export default function AiPage() {
       </div>
 
       <footer className="w-full mb-20 md:mb-0 px-container-margin py-lg bg-surface-bright border-t border-outline-variant/10">
+        <p className="max-w-3xl mx-auto mb-sm text-center text-[11px] text-on-surface-variant">AI journey guidance currently supports the Red, Orange, and Airport lines. Other routes are coming soon.</p>
         <div className="max-w-3xl mx-auto flex items-center gap-md bg-surface-container p-sm rounded-2xl shadow-inner border border-outline-variant/5">
           <button className="p-md text-outline hover:text-primary transition-colors">
             <span className="material-symbols-outlined">mic</span>

@@ -5,6 +5,7 @@ import HomePage from '@/pages/HomePage';
 import MapPage from '@/pages/MapPage';
 import SchedulesPage from '@/pages/SchedulesPage';
 import AiPage from '@/pages/AiPage';
+import SupportPage from '@/pages/SupportPage';
 
 function App() {
   const [page, setPage] = useState('home');
@@ -31,6 +32,8 @@ function App() {
         return <SchedulesPage routeTypeFilter={routeTypeFilter} />;
       case 'ai':
         return <AiPage />;
+      case 'support':
+        return <SupportPage />;
       default:
         return <HomePage onNavigate={handleNavigate} onOpenRouteGroup={openRouteGroup} />;
     }
