@@ -174,49 +174,96 @@ async function getAssistantResponse(query: string, location: GeolocationPosition
   const pair = findFromToPair(query);
   const destination = findStationInQuery(query);
   const isJourneyRequest = /how|reach|get|go|route/i.test(query);
-  if (!pair && destination && isJourneyRequest && !location) {
-    return `To plan a trip to ${destination}, please allow location access when your browser asks. I will use your location to choose the nearest station, then find the route with the fewest bus changes.`;
-  }
+
+  let routeContext = '';
+
+  // Build real route data first (source of truth)
   if (!pair && destination && location) {
     const { latitude, longitude } = location.coords;
-    const nearest = [...ALL_STATIONS].sort((a, b) => distanceKm(latitude, longitude, a) - distanceKm(latitude, longitude, b))[0];
+
+    const nearest = [...ALL_STATIONS].sort(
+      (a, b) =>
+        distanceKm(latitude, longitude, a) -
+        distanceKm(latitude, longitude, b)
+    )[0];
+
     let placeName = 'your current location';
+
     try {
-      const placeResponse = await fetch(`/api/place?lat=${encodeURIComponent(latitude)}&lng=${encodeURIComponent(longitude)}`);
+      const placeResponse = await fetch(
+        `/api/place?lat=${encodeURIComponent(latitude)}&lng=${encodeURIComponent(longitude)}`
+      );
       const place = await placeResponse.json();
       placeName = place.name ?? placeName;
     } catch {
-      // Local Vite does not serve the Vercel OpenStreetMap endpoint.
+      // Ignore reverse geocoding failures
     }
+
     if (nearest) {
-      return `I located you near ${placeName}. The nearest transit station is ${nearest.name} (estimated ${distanceKm(latitude, longitude, nearest).toFixed(1)} km away).\n\n${describeJourney(planJourney(nearest.name, destination))}`;
+      routeContext = `
+User location:
+${placeName}
+
+Nearest station:
+${nearest.name}
+
+Distance:
+${distanceKm(latitude, longitude, nearest).toFixed(1)} km
+
+Suggested route:
+${describeJourney(planJourney(nearest.name, destination))}
+`;
     }
   }
-  // Vercel production endpoint. Its GROQ_API_KEY is a Vercel environment
-  // variable, so it never reaches the browser.
+
+  // Ask Groq with route information included
   try {
     const response = await fetch('/api/assistant', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, network: buildTransitSummary() }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        routeContext,
+        network: buildTransitSummary(),
+      }),
     });
+
     const data = await response.json();
-    if (response.ok && typeof data?.answer === 'string') return data.answer;
+
+    if (response.ok && typeof data?.answer === 'string') {
+      return data.answer;
+    }
   } catch {
-    // Local Vite development has no /api function; continue to the fallback.
+    // Continue to fallbacks
   }
+
+  // Supabase Edge Function fallback
   try {
     const { data, error } = await supabase.functions.invoke('assistant', {
-      body: { query, network: buildTransitSummary() },
+      body: {
+        query,
+        routeContext,
+        network: buildTransitSummary(),
+      },
     });
-    if (!error && typeof data?.answer === 'string') return data.answer;
+
+    if (!error && typeof data?.answer === 'string') {
+      return data.answer;
+    }
   } catch {
-    // The offline route planner below keeps the assistant useful before the
-    // Supabase Edge Function is deployed.
+    // Continue to offline fallback
   }
+
+  // If location was needed but unavailable
+  if (!pair && destination && isJourneyRequest && !location) {
+    return `To plan a trip to ${destination}, please allow location access. I will use your location to find the nearest station and the best route.`;
+  }
+
+  // Final offline fallback
   return getResponse(query);
 }
-
 export default function AiPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
