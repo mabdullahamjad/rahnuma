@@ -20,7 +20,7 @@ const AI_AVATAR_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuA6onK
 
 const starters = [
   'How do I get from Saddar to Bhara Kahu?',
-  "What's the fare from Faizabad to Pak Secretariat?",
+  "Who are you? and what's your job?",
   'Which routes pass through PIMS?',
   'Tell me about the Red Line',
 ];
