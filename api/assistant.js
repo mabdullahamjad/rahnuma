@@ -28,7 +28,11 @@ export default async function handler(request, response) {
       }),
     });
 
-    if (!groqResponse.ok) throw new Error(`Groq request failed (${groqResponse.status}).`);
+if (!groqResponse.ok) {
+  const errorText = await groqResponse.text();
+  console.error("Groq error:", errorText);
+  throw new Error(`Groq request failed (${groqResponse.status}): ${errorText}`);
+}
     const payload = await groqResponse.json();
     return response.status(200).json({ answer: payload.choices?.[0]?.message?.content ?? 'I could not prepare a response.' });
   } catch (error) {

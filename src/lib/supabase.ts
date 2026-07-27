@@ -1,3 +1,7 @@
+console.log("VITE_SUPABASE_URL =", import.meta.env.VITE_SUPABASE_URL);
+console.log("VITE_SUPABASE_ANON_KEY =", import.meta.env.VITE_SUPABASE_ANON_KEY);
+console.log("All env =", import.meta.env);
+
 import { createClient } from '@supabase/supabase-js';
 import { ALL_ROUTES, ALL_STATIONS, STATION_ROUTES, calculateFare, buildTransitSummary, type RouteDef, type StationDef } from '@/data/transitData';
 
