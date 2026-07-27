@@ -138,8 +138,9 @@ export default function MapPage() {
 
   // Nearest station + arrivals (simulated ETAs based on frequency)
   const arrivals: Arrival[] = useMemo(() => {
-    if (!stations.length || !routes.length) return [];
-    const sorted = [...stations].sort(
+    const confirmedStations = stations.filter((station) => Number.isFinite(station.lat) && Number.isFinite(station.lng));
+    if (!confirmedStations.length || !routes.length) return [];
+    const sorted = [...confirmedStations].sort(
       (a, b) =>
         Math.hypot(a.lat - TWIN_CITIES_CENTER[0], a.lng - TWIN_CITIES_CENTER[1]) -
         Math.hypot(b.lat - TWIN_CITIES_CENTER[0], b.lng - TWIN_CITIES_CENTER[1])
@@ -166,8 +167,9 @@ export default function MapPage() {
   }, [stations, routes, routeStations]);
 
   const nearestStation = useMemo(() => {
-    if (!stations.length) return null;
-    return [...stations].sort(
+    const confirmedStations = stations.filter((station) => Number.isFinite(station.lat) && Number.isFinite(station.lng));
+    if (!confirmedStations.length) return null;
+    return [...confirmedStations].sort(
       (a, b) =>
         Math.hypot(a.lat - TWIN_CITIES_CENTER[0], a.lng - TWIN_CITIES_CENTER[1]) -
         Math.hypot(b.lat - TWIN_CITIES_CENTER[0], b.lng - TWIN_CITIES_CENTER[1])

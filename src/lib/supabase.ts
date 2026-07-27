@@ -43,7 +43,7 @@ export type RouteStation = {
   route: TransitRoute;
 };
 
-const CACHE_KEY = 'rahnuma_transit_cache_v3';
+const CACHE_KEY = 'rahnuma_transit_cache_v4';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
 interface CachedData {

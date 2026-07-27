@@ -233,6 +233,7 @@ export default function AiPage() {
   ]);
   const [input, setInput] = useState('');
   const [showStarters, setShowStarters] = useState(true);
+  const [isThinking, setIsThinking] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -245,21 +246,17 @@ export default function AiPage() {
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setShowStarters(false);
+    setIsThinking(true);
 
     const requiresLocation = !findFromToPair(text) && !!findStationInQuery(text) && /how|reach|get|go|route/i.test(text);
     const locationPromise = requiresLocation ? getLocation() : Promise.resolve(null);
     setTimeout(async () => {
-  const location = await locationPromise;
-
-  const aiMsg: Message = {
-    id: Date.now() + 1,
-    text: await getAssistantResponse(text, location),
-    isUser: false,
+      const location = await locationPromise;
+      const aiMsg: Message = { id: Date.now() + 1, text: await getAssistantResponse(text, location), isUser: false };
+      setMessages((prev) => [...prev, aiMsg]);
+      setIsThinking(false);
+    }, 350);
   };
-
-  setMessages((prev) => [...prev, aiMsg]);
-}, 600);
-}
   const handleSubmit = () => sendMessage(input);
   return (
     <main className="md:ml-64 h-screen flex flex-col relative">
@@ -295,6 +292,18 @@ export default function AiPage() {
                 {s}
               </button>
             ))}
+          </div>
+        )}
+        {isThinking && (
+          <div className="flex gap-md max-w-2xl mx-auto w-full animate-fade-in">
+            <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center shrink-0 shadow-sm">
+              <img src={AI_AVATAR_URL} alt="AI Assistant" className="w-full h-full object-contain rounded-full" />
+            </div>
+            <div className="px-md py-sm rounded-2xl rounded-tl-none bg-surface-container-low border border-outline-variant/10 flex gap-1 items-center" aria-label="Assistant is typing">
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce" />
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+            </div>
           </div>
         )}
         <div ref={chatEndRef} />

@@ -26,132 +26,44 @@ export interface StationDef {
   city: 'Islamabad' | 'Rawalpindi';
 }
 
-// Approximate GPS coordinates along the actual Red/Blue/Green/Orange line corridors.
-const STATION_COORDS: Record<string, [number, number]> = {
-  // Red Line (BRT) — Faiz Ahmed Faiz to Pak Secretariat
-  'Faiz Ahmed Faiz': [33.6520, 73.0770],
-  'Faizabad': [33.6670, 73.0800],
-  'IJP Road': [33.6760, 73.0830],
-  'Pir Wadhai': [33.6800, 73.0720],
-  'Saddar': [33.6850, 73.0690],
-  'Rialto Chowk': [33.6870, 73.0670],
-  'Marrir Chowk': [33.6900, 73.0650],
-  'Liaquat Bagh': [33.6920, 73.0630],
-  'Committee Chowk': [33.6950, 73.0610],
-  'Waris Khan': [33.6980, 73.0590],
-  'Rehmanabad': [33.7010, 73.0570],
-  'Chandni Chowk': [33.7040, 73.0550],
-  'Sadiqabad': [33.7070, 73.0530],
-  'Fauji Foundation': [33.7100, 73.0510],
-  'Shamsabad': [33.7130, 73.0490],
-  'Khayaban-e-Johar': [33.7160, 73.0470],
-  'Faiz-e-Aam': [33.7190, 73.0450],
-  'I-8': [33.7220, 73.0430],
-  'I-9': [33.7250, 73.0410],
-  'Pak Secretariat': [33.7280, 73.0390],
-  'Stock Exchange': [33.7300, 73.0370],
-  '7th Avenue': [33.7320, 73.0350],
-  'Shaheed': [33.7340, 73.0330],
-  'Kashmir Highway': [33.7360, 73.0310],
-  'PIMS': [33.7380, 73.0290],
-  'PIMS Hospital': [33.7372, 73.0308],
-  'Koral Chowk': [33.6115, 73.0705],
-  'Nust': [33.7400, 73.0270],
-  'G-9 Markaz': [33.7420, 73.0250],
-  'G-8 Markaz': [33.7440, 73.0230],
-  'G-7 Markaz': [33.7460, 73.0210],
-  'Aabpara': [33.7480, 73.0190],
-  'Saudi Pak Tower': [33.7500, 73.0170],
-  'Parliament House': [33.7520, 73.0150],
-  'D-Chowk': [33.7540, 73.0130],
-  // Blue / Green / Orange Lines — shared station names where lines overlap
-  'Bhara Kahu': [33.6700, 73.1400],
-  'Quaid-e-Azam University': [33.6800, 73.1300],
-  'Bari Imam': [33.6900, 73.1200],
-  'Malpur': [33.6750, 73.1300],
-  // Orange Line
-  'Chaklala': [33.6000, 73.0900],
-  'Airport': [33.6100, 73.1000],
-  'Khanna': [33.6200, 73.0850],
-  'Sohan': [33.6300, 73.0800],
-  'Pir Sohawa': [33.6400, 73.0750],
-  // Feeder hubs
-  'Pakistan Secretariat': [33.7280, 73.0390],
-  'Satra Meel': [33.6600, 73.0900],
-  'Nadir Chowk': [33.6650, 73.0850],
-  'Saddar Hub': [33.6850, 73.0690],
-  'Faizabad Hub': [33.6670, 73.0800],
-  'I-8 Hub': [33.7220, 73.0430],
-  'G-9 Hub': [33.7420, 73.0250],
-  'G-7 Hub': [33.7460, 73.0210],
-  'F-8 Markaz': [33.7180, 73.0500],
-  'F-11 Markaz': [33.6800, 73.0200],
-  'E-11 Markaz': [33.6700, 73.0300],
-  'G-10 Markaz': [33.7300, 73.0400],
-  'G-11 Markaz': [33.7350, 73.0350],
-  'H-8 Markaz': [33.7250, 73.0450],
-  'H-9 Markaz': [33.7280, 73.0480],
-  'H-12 Markaz': [33.7400, 73.0500],
-  'I-10 Markaz': [33.7150, 73.0400],
-  'I-11 Markaz': [33.7200, 73.0450],
-  'F-6 Markaz': [33.7350, 73.0600],
-  'F-7 Markaz': [33.7400, 73.0550],
-  'Blue Area': [33.7250, 73.0700],
-  'Karachi Company': [33.7300, 73.0600],
-  'Aabpara Market': [33.7480, 73.0190],
-  'Melody Market': [33.7320, 73.0650],
-  'Super Market': [33.7350, 73.0550],
-  'Jinnah Super': [33.7400, 73.0550],
-  'Kohsar Market': [33.7380, 73.0580],
-  'China Chowk': [33.7200, 73.0500],
-  'NADRA Headquarters': [33.7250, 73.0450],
-  'Centaurus': [33.7150, 73.0550],
-  'Faisal Mosque': [33.7280, 73.0700],
-  'Daman-e-Koh': [33.7450, 73.0800],
-  'Lok Virsa': [33.7350, 73.0750],
-  'Pakistan Monument': [33.7400, 73.0850],
-  'Shakarparian': [33.7000, 73.0700],
-  'Rawal Lake': [33.6900, 73.0600],
-  'Murree Road': [33.6950, 73.0550],
-  'Commercial Market': [33.6900, 73.0450],
-  'Sadiqabad Hub': [33.7070, 73.0530],
-  'Shamsabad Hub': [33.7130, 73.0490],
-  'Chandni Chowk Hub': [33.7040, 73.0550],
-  'Raja Bazaar': [33.6850, 73.0650],
-  'Trunk Bazaar': [33.6880, 73.0630],
-  'Banni': [33.6910, 73.0610],
-  'Gordon College': [33.6930, 73.0590],
-  'Liaquat Bagh Hub': [33.6920, 73.0630],
-  'Marrir Chowk Hub': [33.6900, 73.0650],
-  'Rialto Hub': [33.6870, 73.0670],
-  'Pir Wadhai Hub': [33.6800, 73.0720],
-  'IJP Hub': [33.6760, 73.0830],
-  'Faizabad Terminal': [33.6670, 73.0800],
-  'Satra Meel Terminal': [33.6600, 73.0900],
-  'Khanna Pull': [33.6200, 73.0850],
-  'Koral': [33.6100, 73.0750],
-  'Taramri': [33.6000, 73.0700],
-  'Lehtarar': [33.5900, 73.0650],
-  'Sohan Hub': [33.6300, 73.0800],
-  'Bharakahu Hub': [33.6700, 73.1400],
-  'Malpur Hub': [33.6750, 73.1300],
-  'Bari Imam Hub': [33.6850, 73.1200],
-  'Quaid-e-Azam Hub': [33.6800, 73.1250],
-  'Pir Sohawa Hub': [33.6400, 73.0750],
-  'Chaklala Hub': [33.6000, 73.0900],
-  'Airport Hub': [33.6100, 73.1000],
-  'Nadir Chowk Hub': [33.6650, 73.0850],
-  'G-6 Markaz': [33.7450, 73.0250],
-  'G-5 Markaz': [33.7500, 73.0200],
-  'F-5 Markaz': [33.7450, 73.0650],
-  'G-13 Markaz': [33.7400, 73.0300],
-  'G-12 Markaz': [33.7380, 73.0280],
-  'I-8 Markaz': [33.7220, 73.0430],
-  'I-9 Markaz': [33.7250, 73.0410],
+// Only the coordinates supplied in "Copy of Transit Routes.xlsx" are used
+// for location features. Routes without a confirmed coordinate remain fully
+// searchable and routable, but are never used to guess a user's position.
+const CONFIRMED_STATION_COORDS: Record<string, [number, number]> = {
+  'Secretariat': [33.73559305150943, 73.09203363786123],
+  'Parade Ground': [33.72488210291263, 73.08419049355606],
+  'Shaheed-e-Millat': [33.72144773417213, 73.07857020931243],
+  '7th Avenue': [33.71715457997217, 73.0703309489168],
+  'Stock Exchange': [33.71168447248718, 73.05928154646917],
+  'PIMS': [33.7061026955443, 73.04844242692431],
+  'Katchery': [33.701824677924776, 73.04121634730535],
+  'Ibn-e-Sina': [33.69584463828287, 73.03844443836758],
+  'Chaman': [33.68967330992825, 73.04299419230246],
+  'Kashmir Highway': [33.684487779097985, 73.04763952916045],
+  'Faiz Ahmed Faiz': [33.67576068268328, 73.05424196027512],
+  'Khayaban-e-Johar': [33.66993431768572, 73.05907933544766],
+  'Potohar': [33.66080647533194, 73.0654774032312],
+  'IJP': [33.65694864207014, 73.07238677351886],
+  'Faizabad': [33.66144335333329, 73.08259427407589],
+  'Shamsabad': [33.65017603282725, 73.0797322279228],
+  '6th Road': [33.643454254543954, 73.07787906146983],
+  'Rehmanabad': [33.6361258161647, 73.0743216437648],
+  'Chandni Chowk': [33.63010556100201, 73.07193900117629],
+  'Waris Khan': [33.62057148160347, 73.06601548716117],
+  'Committee Chowk': [33.61432967043387, 73.06492344269753],
+  'Liaquat Bagh': [33.605896306910346, 73.06573420295362],
+  'Marir': [33.59976443525133, 73.06266837110331],
+  'Saddar': [33.59374181720796, 73.05604552640979],
+  'N-5': [33.63269360878835, 72.94482736611333],
+  'G-15': [33.62561356911477, 72.93049908072668],
+  'G-16': [33.617147755383655, 72.91428144280061],
+  'Masjid Abul Qasim': [33.61003562014385, 72.90067734492791],
+  'Top City': [33.58546020704842, 72.8615514396097],
+  'Airport': [33.556563129755766, 72.83789808138624],
 };
 
-function coordFor(name: string): [number, number] {
-  return STATION_COORDS[name] ?? [33.68, 73.05];
+function coordFor(name: string): [number, number] | null {
+  return CONFIRMED_STATION_COORDS[name] ?? null;
 }
 
 function cityFor(name: string): 'Islamabad' | 'Rawalpindi' {
@@ -544,11 +456,11 @@ export const ALL_STATIONS: StationDef[] = (() => {
   for (const route of ALL_ROUTES) {
     for (const name of route.stations) {
       if (seen.has(name)) continue;
-      const [lat, lng] = coordFor(name);
+      const coord = coordFor(name);
       seen.set(name, {
         name,
-        lat,
-        lng,
+        lat: coord?.[0] ?? Number.NaN,
+        lng: coord?.[1] ?? Number.NaN,
         type: stationType(route.type, name),
         city: cityFor(name),
       });
@@ -601,6 +513,7 @@ const BRT_KG_CO2_PER_KM = 0.069;
 const FEEDER_KG_CO2_PER_KM = 0.089;
 
 function distanceKm(a: StationDef, b: StationDef): number {
+  if (!Number.isFinite(a.lat) || !Number.isFinite(a.lng) || !Number.isFinite(b.lat) || !Number.isFinite(b.lng)) return 0;
   const radians = (value: number) => (value * Math.PI) / 180;
   const dLat = radians(b.lat - a.lat);
   const dLng = radians(b.lng - a.lng);

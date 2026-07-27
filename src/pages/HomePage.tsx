@@ -105,10 +105,13 @@ export default function HomePage({ onNavigate, onOpenRouteGroup }: { onNavigate:
   };
 
   const validStations = stations.filter(
-    station => station.type === "brt" || station.type === "metro"
+    station => station.type === "brt" && Number.isFinite(station.lat) && Number.isFinite(station.lng)
   );
 
-  if (validStations.length === 0) return;
+  if (validStations.length === 0) {
+    setLocationStatus('No confirmed station coordinates are available. Please choose a station.');
+    return;
+  }
 
   const nearest = validStations.reduce((closest, station) =>
     distanceInKm(station) < distanceInKm(closest)
