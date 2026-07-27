@@ -24,7 +24,6 @@ export default async function handler(request, response) {
           { role: 'user', content: query },
         ],
         search_settings: { country: 'pakistan', include_domains: ['cda.gov.pk', 'pma.punjab.gov.pk', 'maps.google.com'] },
-        citation_options: 'enabled',
       }),
     });
 
